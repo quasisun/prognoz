@@ -1,0 +1,1176 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Джйотиш-прогноз</title>
+<link rel="stylesheet" href="astro-app.css">
+<style>
+  .astro-title{overflow-wrap:break-word;word-break:normal;hyphens:auto;
+    font-size:clamp(2.6rem,11vw,4.4rem)}
+  .astro-subtitle{font-size:clamp(.75rem,2.8vw,.92rem);letter-spacing:.02em}
+  .field-row{display:flex;gap:16px;flex-wrap:wrap}
+  .field-row .astro-field{flex:1 1 160px;margin-bottom:16px}
+
+  .city-wrap{position:relative}
+  .ac-dropdown{position:absolute;z-index:60;left:0;right:0;top:100%;
+    background:#fff;border:2px solid var(--c-orange);border-top:none;
+    border-radius:0 0 12px 12px;max-height:340px;overflow-y:auto;
+    box-shadow:0 12px 28px rgba(0,0,0,.16)}
+  .ac-item{padding:10px 14px;cursor:pointer;border-bottom:1px solid rgba(0,0,0,.07)}
+  .ac-item:last-child{border-bottom:none}
+  .ac-item:hover,.ac-item.active{background:#fdeee9}
+  .ac-name{font-weight:700;color:var(--c-ink)}
+  .ac-admin{font-size:.82rem;color:var(--c-ink-soft);margin-top:1px}
+  .ac-empty{padding:14px;color:var(--c-ink-soft)}
+  .city-chosen{margin:2px 0 0;font-size:.9rem;color:var(--c-ink-soft)}
+  .city-chosen b{color:var(--c-ink)}
+
+  details.manual{margin:4px 0 18px;border:1px solid var(--c-line);border-radius:10px;padding:0 14px}
+  details.manual[open]{padding-bottom:12px}
+  details.manual summary{cursor:pointer;padding:12px 0;color:var(--c-red);font-weight:600}
+
+  /* выбор периода — пилюли */
+  .period-sel{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 6px}
+  .period-sel button{flex:1 1 auto;min-width:84px;font-size:.92rem;padding:11px 14px;border-radius:999px;
+    border:1.5px solid var(--c-line);background:#fff;color:var(--c-ink);cursor:pointer;font-weight:600}
+  .period-sel button:hover{border-color:var(--c-orange);color:var(--c-red)}
+  .period-sel button.on{background:linear-gradient(135deg,var(--c-red),var(--c-orange));
+    color:#fff;border-color:transparent}
+
+  /* карточка вывода периода — фирменный градиент */
+  .verdict-card{margin:8px 0 6px;border-radius:16px;text-align:center;
+    background:linear-gradient(135deg,var(--c-red) 0%,var(--c-orange) 100%);
+    color:#fff;padding:22px 18px 20px}
+  .verdict-label{font-size:.9rem;letter-spacing:.04em;text-transform:uppercase;opacity:.92}
+  .verdict-title{font-family:var(--font-display);font-weight:400;line-height:1.12;
+    font-size:clamp(2rem,8vw,3.1rem);margin:6px 0 6px}
+  .verdict-sub{font-size:1rem;opacity:.96;line-height:1.4}
+
+  .block-title{margin:22px 0 4px;font-size:1.12rem;color:var(--c-red);
+    font-family:var(--font-display);font-weight:400}
+  .block-lead{font-size:.9rem;color:var(--c-ink-soft);margin:0 0 8px;line-height:1.5}
+
+  .rtable{width:100%;border-collapse:collapse;font-size:.9rem;margin:6px 0 4px}
+  .rtable th,.rtable td{padding:8px 10px;border-top:1px solid var(--c-line);text-align:left;vertical-align:top}
+  .rtable th{color:var(--c-red);text-transform:uppercase;font-size:.76rem;letter-spacing:.03em}
+  .rtable tr.good td{background:rgba(26,138,60,.08)}
+  .rtable tr.bad td{background:rgba(223,34,39,.07)}
+  .rtable td.num{text-align:center;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+  .card{border:1px solid var(--c-line);border-radius:14px;padding:14px 16px;margin:8px 0;background:#fff}
+  .card h4{margin:0 0 4px;font-size:1rem;color:var(--c-ink)}
+  .card .sub{font-size:.86rem;color:var(--c-ink-soft);margin:0 0 6px}
+  .card p{margin:6px 0 0;font-size:.92rem;line-height:1.5}
+  .tag{display:inline-block;font-size:.76rem;font-weight:700;padding:2px 9px;border-radius:999px;
+    letter-spacing:.02em;vertical-align:.06em}
+  .tag.g{background:rgba(26,138,60,.14);color:#1a7a38}
+  .tag.b{background:rgba(223,34,39,.12);color:var(--c-red)}
+  .tag.n{background:rgba(0,0,0,.06);color:var(--c-ink-soft)}
+  .tag.r{background:rgba(120,60,180,.14);color:#6a35b0}
+
+  .seg-list{margin:6px 0 0;padding:0;list-style:none}
+  .seg-list li{padding:9px 0;border-top:1px solid var(--c-line);font-size:.92rem;line-height:1.5}
+  .seg-list li:first-child{border-top:none}
+  .seg-when{font-weight:700;color:var(--c-red)}
+  .seg-head{font-weight:700;color:var(--c-ink)}
+
+  .bindu-bar{display:inline-block;height:8px;border-radius:4px;vertical-align:middle;
+    background:linear-gradient(90deg,var(--c-red),var(--c-orange));min-width:2px}
+
+  .why{font-size:.9rem;color:var(--c-ink);line-height:1.55;margin:6px 0 0}
+  .why b{color:var(--c-ink)}
+  .note{font-size:.86rem;color:var(--c-ink-soft);line-height:1.5}
+  .err{color:var(--c-red);font-weight:600}
+  .calc-details{margin:16px 2px 0;font-size:.84rem;color:var(--c-ink-soft);line-height:1.55}
+  .calc-details b{color:var(--c-ink)}
+
+  details.natal{margin:10px 0;border:1px solid var(--c-line);border-radius:12px;padding:0 14px;background:#fff}
+  details.natal[open]{padding-bottom:12px}
+  details.natal>summary{cursor:pointer;padding:13px 0;color:var(--c-red);font-weight:700}
+</style>
+</head>
+
+<body>
+<div class="astro-app">
+
+  <header class="astro-header">
+    <h1 class="astro-title">Прогноз</h1>
+    <p class="astro-subtitle">Джйотиш · Вимшоттари-даша, транзиты, Саде-сати, панчанга · аянамша Лахири</p>
+  </header>
+
+  <div id="engineBadge" class="engine-badge loading">Загрузка швейцарских эфемерид…</div>
+
+  <section class="astro-section">
+    <div class="astro-card">
+
+      <!-- Данные рождения -->
+      <div class="field-row">
+        <div class="astro-field">
+          <label for="bdate">Дата рождения</label>
+          <input id="bdate" type="date">
+        </div>
+        <div class="astro-field">
+          <label for="btime">Время рождения</label>
+          <input id="btime" type="time">
+        </div>
+      </div>
+
+      <div class="astro-field city-wrap">
+        <label for="city">Место рождения</label>
+        <input id="city" type="text" autocomplete="off" spellcheck="false"
+               placeholder="Начните вводить — Россия целиком, вкл. сёла и деревни">
+        <div id="acDrop" class="ac-dropdown" hidden></div>
+        <p id="cityChosen" class="city-chosen"></p>
+      </div>
+
+      <details class="manual">
+        <summary>Место не нашлось? Указать часовой пояс и координаты вручную</summary>
+        <div class="astro-field" style="margin-top:6px">
+          <label for="tzManual">Часовой пояс места рождения</label>
+          <select id="tzManual"></select>
+        </div>
+        <div class="field-row">
+          <div class="astro-field">
+            <label for="latManual">Широта (°, + север)</label>
+            <input id="latManual" type="number" step="0.0001" placeholder="напр. 55.7558">
+          </div>
+          <div class="astro-field">
+            <label for="lonManual">Долгота (°, + восток)</label>
+            <input id="lonManual" type="number" step="0.0001" placeholder="напр. 37.6173">
+          </div>
+        </div>
+        <p class="note" style="margin:0">
+          Историческое смещение (декретное, летнее/зимнее, реформы) учитывается автоматически
+          по дате рождения. Координаты нужны для восходящего знака (Лагны).
+        </p>
+      </details>
+
+      <!-- Дата прогноза -->
+      <div class="field-row" style="margin-top:6px">
+        <div class="astro-field">
+          <label for="tdate">Дата прогноза</label>
+          <input id="tdate" type="date">
+        </div>
+        <div class="astro-field">
+          <label for="ttime">Время (для прогноза на день)</label>
+          <input id="ttime" type="time" value="12:00">
+        </div>
+      </div>
+
+      <label style="display:block;margin-bottom:4px">Период прогноза</label>
+      <div class="period-sel" id="periodSel">
+        <button type="button" data-p="day">День</button>
+        <button type="button" data-p="week">Неделя</button>
+        <button type="button" data-p="month" class="on">Месяц</button>
+        <button type="button" data-p="year">Год</button>
+        <button type="button" data-p="five">5 лет</button>
+      </div>
+
+      <button class="astro-btn astro-btn--block" id="calcBtn" style="margin-top:18px">
+        Рассчитать прогноз
+      </button>
+
+      <div id="result"></div>
+    </div>
+  </section>
+
+  <footer class="astro-footer">
+    <p class="astro-disclaimer">
+      <strong>О методике.</strong>
+      Прогноз строится по классическим методам джйотиша. <b>Вимшоттари-даша</b> — главный
+      временно́й ключ: жизнь делится на периоды планет (махадаша → антардаша → пратьянтара →
+      сукшма → прана), и активные управители задают темы отрезка. <b>Гочара (транзиты)</b>
+      оцениваются от натальной Луны (Чандра-лагны) и от Лагны по классическим благоприятным
+      домам; сила транзита уточняется по <b>Аштакаварге</b> (числу бинду в знаке).
+      <b>Саде-сати</b> — семь с половиной лет транзита Сатурна по 12-му, 1-му и 2-му домам
+      от Луны — рассчитывается с фазами и приблизительными датами. Для дня и недели —
+      <b>панчанга</b> (титхи, вара, накшатра, йога, карана), <b>тара-бала</b> (9 тар от
+      накшатры рождения) и <b>чандра-бала</b> (положение Луны от натальной). Расчёт
+      сидерический, аянамша Лахири (Читрапакша), швейцарские эфемериды. Прогноз —
+      вспомогательный ориентир, а не предопределённость: тенденции показывают почву, выбор
+      остаётся за человеком.
+    </p>
+    <p class="astro-credits">
+      Эфемериды: Swiss Ephemeris (Astrodienst AG, лицензия AGPL/коммерческая).
+      База мест: GeoNames (CC&nbsp;BY&nbsp;4.0, geonames.org).
+      Часовые пояса: IANA tz database через moment-timezone (MIT).
+    </p>
+    <p class="astro-copyright">
+      © <span id="year"></span> Индийская астрология со Светланой Кройцер · goroskop1008.ru
+    </p>
+  </footer>
+
+</div>
+
+<script src="vendor/moment.min.js"></script>
+<script src="vendor/moment-timezone-with-data.min.js"></script>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════
+   АСТРОНОМИЧЕСКИЙ ДВИЖОК (перенесён из «Ректификации» / «Джйотиш-сюиты»)
+   Swiss Ephemeris (WASM, Moshier) → тропические долготы → минус аянамша
+   Лахири → сидерические. Запасной аналитический расчёт (Meeus), если WASM
+   не загрузился (file://).
+   ════════════════════════════════════════════════════════════════════ */
+const D2R=Math.PI/180, R2D=180/Math.PI, MS_DAY=864e5;
+function nd(d){return((d%360)+360)%360;}
+function nr(a){a%=2*Math.PI;if(a<0)a+=2*Math.PI;return a;}
+function lahiriAyanamsa(JD){ const t=(JD-2451545.0)/36525.0; return 23.85306 + 1.3968878*t + 0.0003071*t*t; }
+function jdLocal(y,mo,d,h,mi,tz){
+  const ut=h+mi/60-tz; let Y=y,M=mo,D=d+ut/24;
+  if(M<=2){Y--;M+=12;}
+  const A=Math.floor(Y/100),B=2-A+Math.floor(A/4);
+  return Math.floor(365.25*(Y+4716))+Math.floor(30.6001*(M+1))+D+B-1524.5;
+}
+function jdFromMs(ms){ return 2440587.5 + ms/86400000; } // JD(UT) из unix-ms
+
+let SWE=null, SWE_READY=false, SWE_FAILED=false, _enginePromise=null;
+function ensureEngine(){ if(!_enginePromise) _enginePromise=initEngine(); return _enginePromise; }
+async function initEngine(){
+  const badge=document.getElementById('engineBadge');
+  try{
+    if(typeof window.exports==='undefined'){ window.exports={}; window.module={exports:window.exports}; }
+    const mod=await import('./swisseph-browser.js');
+    const SwissEphemeris=mod.SwissEphemeris||window.SwissEphemeris||mod.default;
+    const inst=new SwissEphemeris();
+    await inst.init();
+    const m=inst.module, GREG=1;
+    SWE={
+      julday:(y,mo,d,hUT)=> m.ccall('swe_julday_wrap','number',
+        ['number','number','number','number','number'],[y,mo,d,hUT,GREG]),
+      calc:(jd,body,flags)=>{
+        const xx=m._malloc(6*8), se=m._malloc(256);
+        const r=m.ccall('swe_calc_ut_wrap','number',
+          ['number','number','number','number','number'],[jd,body,flags,xx,se]);
+        const lon=m.getValue(xx,'double'), spd=m.getValue(xx+3*8,'double');
+        m._free(xx); m._free(se);
+        if(r<0) throw new Error('swe_calc_ut failed (body '+body+')');
+        return {lon, spd};
+      },
+      houses:(jd,lat,lon,hsys)=>{
+        const c=m._malloc(13*8), a=m._malloc(10*8);
+        m.ccall('swe_houses_wrap','number',
+          ['number','number','number','number','number','number'],[jd,lat,lon,hsys,c,a]);
+        const asc=m.getValue(a,'double');
+        m._free(c); m._free(a);
+        return asc;
+      }
+    };
+    if(!isFinite(SWE.calc(SWE.julday(2000,1,1,12),0,4|256).lon)) throw new Error('no result');
+    SWE_READY=true;
+    badge.className='engine-badge';
+    badge.textContent='Швейцарские эфемериды загружены (Moshier) · аянамша Лахири';
+  }catch(e){
+    console.warn('Swiss Ephemeris init failed — analytic fallback', e);
+    SWE_FAILED=true;
+    badge.className='engine-badge fallback';
+    badge.textContent='Эфемериды не загрузились — приближённый расчёт. Откройте через сервер (python3 -m http.server).';
+  }
+}
+
+const SWE_ID={Sun:0,Moon:1,Mercury:2,Venus:3,Mars:4,Jupiter:5,Saturn:6,Rahu:11};
+const HSYS_WHOLE='W'.charCodeAt(0);
+
+/* ── аналитический ЗАПАСНОЙ расчёт ── */
+function eps(JD){const T=(JD-2451545)/36525;return 23.439291111-0.013004167*T;}
+function gmst(JD){const T=(JD-2451545)/36525;return nd(280.46061837+360.98564736629*(JD-2451545)+0.000387933*T*T);}
+function sunLon(JD){
+  const T=(JD-2451545)/36525;
+  const L0=280.46646+36000.76983*T+0.0003032*T*T;
+  const M=nd(357.52911+35999.05029*T-0.0001537*T*T)*D2R;
+  const C=(1.914602-0.004817*T-0.000014*T*T)*Math.sin(M)+(0.019993-0.000101*T)*Math.sin(2*M)+0.000289*Math.sin(3*M);
+  const om=nd(125.04-1934.136*T)*D2R;
+  return nd(L0+C-0.00569-0.00478*Math.sin(om));
+}
+function moonLon(JD){
+  const T=(JD-2451545)/36525;
+  const L=nd(218.3164477+481267.88123421*T-0.0015786*T*T);
+  const Dm=nd(297.8501921+445267.1114034*T-0.0018819*T*T)*D2R;
+  const M=nd(357.5291092+35999.0502909*T-0.0001536*T*T)*D2R;
+  const Mp=nd(134.9633964+477198.8675055*T+0.0087414*T*T)*D2R;
+  const F=nd(93.2720950+483202.0175233*T-0.0036539*T*T)*D2R;
+  const E=1-0.002516*T-0.0000074*T*T;
+  const dl=6.288774*Math.sin(Mp)+1.274027*Math.sin(2*Dm-Mp)+0.658314*Math.sin(2*Dm)+0.213618*Math.sin(2*Mp)
+   -0.185116*E*Math.sin(M)-0.114332*Math.sin(2*F)+0.058793*Math.sin(2*Dm-2*Mp)+0.057066*E*Math.sin(2*Dm-M-Mp)
+   +0.053322*Math.sin(2*Dm+Mp)+0.045758*E*Math.sin(2*Dm-M)-0.040923*E*Math.sin(M-Mp)-0.034720*Math.sin(Dm)
+   -0.030383*E*Math.sin(M+Mp)+0.015327*Math.sin(2*Dm-2*F)-0.012528*Math.sin(Mp+2*F)+0.010980*Math.sin(Mp-2*F)
+   +0.010675*Math.sin(4*Dm-Mp)+0.010034*Math.sin(3*Mp)+0.008548*Math.sin(4*Dm-2*Mp);
+  return nd(L+dl);
+}
+const ORB={
+  Mercury:{L0:252.250906,L1:149474.0722491,w0:77.456119,w1:1.556628,e0:0.20563069,e1:-2.04e-5,a:0.387098},
+  Venus:{L0:181.979801,L1:58519.2130302,w0:131.563703,w1:1.402216,e0:0.00677323,e1:-4.94e-5,a:0.723330},
+  Earth:{L0:100.464457,L1:36000.7698278,w0:102.937348,w1:1.719527,e0:0.01670862,e1:-4.24e-5,a:1.000000},
+  Mars:{L0:355.433275,L1:19141.6964746,w0:336.060234,w1:1.840330,e0:0.09341233,e1:9.15e-5,a:1.523688},
+  Jupiter:{L0:34.351519,L1:3036.3027748,w0:14.331309,w1:1.612635,e0:0.04849485,e1:1.63e-4,a:5.202561},
+  Saturn:{L0:50.077444,L1:1223.5110686,w0:93.057209,w1:1.963734,e0:0.05550825,e1:-3.46e-4,a:9.537070},
+};
+function solveKepler(M,e){let E=M;for(let i=0;i<60;i++){const dE=(M-E+e*Math.sin(E))/(1-e*Math.cos(E));E+=dE;if(Math.abs(dE)<1e-11)break;}return E;}
+function helioXY(name,T){const el=ORB[name];const L=nd(el.L0+el.L1*T)*D2R;const w=nd(el.w0+el.w1*T)*D2R;const e=el.e0+el.e1*T;const M=nr(L-w);const E=solveKepler(M,e);const nu=2*Math.atan2(Math.sqrt(1+e)*Math.sin(E/2),Math.sqrt(1-e)*Math.cos(E/2));const r=el.a*(1-e*Math.cos(E));const lam=nu+w;return{x:r*Math.cos(lam),y:r*Math.sin(lam)};}
+function geoLonPlanet(name,T){const p=helioXY(name,T);const e=helioXY('Earth',T);return nd(Math.atan2(p.y-e.y,p.x-e.x)*R2D);}
+function mercuryLon(JD){return geoLonPlanet('Mercury',(JD-2451545)/36525);}
+function venusLon(JD){return geoLonPlanet('Venus',(JD-2451545)/36525);}
+function marsLon(JD){return geoLonPlanet('Mars',(JD-2451545)/36525);}
+function jupiterLon(JD){return geoLonPlanet('Jupiter',(JD-2451545)/36525);}
+function saturnLon(JD){return geoLonPlanet('Saturn',(JD-2451545)/36525);}
+function rahuLon(JD){const T=(JD-2451545)/36525;return nd(125.04455501-1934.13626197*T+0.00207696*T*T+0.00000215*T*T*T);}
+function ascLon(JD,lat,lon){
+  const gst=gmst(JD);const lst=nd(gst+lon);const e=eps(JD)*D2R;const L=lat*D2R;const R=lst*D2R;
+  const y=-Math.cos(R);const x=Math.sin(R)*Math.cos(e)+Math.tan(L)*Math.sin(e);
+  let a=nd(Math.atan2(y,x)*R2D);const aR=a*D2R;
+  const alpha=nd(Math.atan2(Math.sin(aR)*Math.cos(e),Math.cos(aR))*R2D);
+  if(nd(lst-alpha)<180)a=nd(a+180);
+  return a;
+}
+const FB={Sun:sunLon,Moon:moonLon,Mercury:mercuryLon,Venus:venusLon,Mars:marsLon,Jupiter:jupiterLon,Saturn:saturnLon,Rahu:rahuLon};
+
+// ── карта рождения → сидерические долготы (+ Лагна) ──
+function computeChart(y,mo,d,h,mi,tz,lat,lon){
+  const JD=jdLocal(y,mo,d,h,mi,tz);
+  const ay=lahiriAyanamsa(JD);
+  const trop={}; let ascTrop;
+  if(SWE_READY){
+    const utHour=h+mi/60-tz;
+    const jdUT=SWE.julday(y,mo,d,utHour);
+    const FL=4|256;
+    for(const k in SWE_ID) trop[k]=nd(SWE.calc(jdUT,SWE_ID[k],FL).lon);
+    ascTrop=nd(SWE.houses(jdUT,lat,lon,HSYS_WHOLE));
+  }else{
+    trop.Sun=sunLon(JD); trop.Moon=moonLon(JD);
+    trop.Mercury=mercuryLon(JD); trop.Venus=venusLon(JD); trop.Mars=marsLon(JD);
+    trop.Jupiter=jupiterLon(JD); trop.Saturn=saturnLon(JD); trop.Rahu=rahuLon(JD);
+    ascTrop=ascLon(JD,lat,lon);
+  }
+  const sid=t=>nd(t-ay); const pos={};
+  for(const k in trop) pos[k]=sid(trop[k]);
+  pos.Ketu=nd(pos.Rahu+180);
+  pos.Lagna=sid(ascTrop);
+  const birthMs=Date.UTC(y,mo-1,d,h,mi)-tz*3600000;
+  return {pos,ay,birthMs};
+}
+
+// ── сидерическая долгота одного тела на момент ms ──
+function bodySid(ms,key){
+  const jd=jdFromMs(ms), ay=lahiriAyanamsa(jd);
+  if(key==='Ketu') return nd(bodySid(ms,'Rahu')+180);
+  if(SWE_READY && SWE_ID[key]!==undefined) return nd(SWE.calc(jd,SWE_ID[key],4|256).lon - ay);
+  return nd(FB[key](jd)-ay);
+}
+function allSid(ms){ const p={}; for(const k of ['Sun','Moon','Mercury','Venus','Mars','Jupiter','Saturn','Rahu']) p[k]=bodySid(ms,k); p.Ketu=nd(p.Rahu+180); return p; }
+function signAtKey(key,ms){ return signIdx(bodySid(ms,key)); }
+function isRetro(ms,key){
+  if(key==='Sun'||key==='Moon') return false;
+  if(key==='Rahu'||key==='Ketu') return true;
+  const a=bodySid(ms-6*3600000,key), b=bodySid(ms+6*3600000,key);
+  let d=b-a; if(d>180)d-=360; if(d<-180)d+=360; return d<0;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   ВИМШОТТАРИ-ДАША
+   ════════════════════════════════════════════════════════════════════ */
+const DASHA_LORDS=['Ketu','Venus','Sun','Moon','Mars','Rahu','Jupiter','Saturn','Mercury'];
+const DASHA_YEARS={Ketu:7,Venus:20,Sun:6,Moon:10,Mars:7,Rahu:18,Jupiter:16,Saturn:19,Mercury:17};
+const DASHA_RU={Ketu:'Кету',Venus:'Венера',Sun:'Солнце',Moon:'Луна',Mars:'Марс',Rahu:'Раху',Jupiter:'Юпитер',Saturn:'Сатурн',Mercury:'Меркурий'};
+const VYEAR=365.25;
+function subPeriods(lord,startDay,durDays){
+  const idx=DASHA_LORDS.indexOf(lord); const out=[]; let s=startDay;
+  for(let k=0;k<9;k++){ const sub=DASHA_LORDS[(idx+k)%9]; const dd=durDays*(DASHA_YEARS[sub]/120); out.push({lord:sub,startDay:s,endDay:s+dd}); s+=dd; }
+  return out;
+}
+function buildTimeline(chart){
+  const moon=nd(chart.pos.Moon), nakSize=360/27;
+  const nakIdx=Math.floor(moon/nakSize), frac=(moon%nakSize)/nakSize, startIdx=nakIdx%9;
+  let startDay=-frac*DASHA_YEARS[DASHA_LORDS[startIdx]]*VYEAR;
+  const mahas=[];
+  for(let k=0;k<14;k++){ const lord=DASHA_LORDS[(startIdx+k)%9]; const dur=DASHA_YEARS[lord]*VYEAR; mahas.push({lord,startDay,endDay:startDay+dur}); startDay+=dur; }
+  return {mahas, birthMs:chart.birthMs, birthLord:DASHA_LORDS[startIdx]};
+}
+// даша на дату до 5 уровней (маха→антара→пратьянтара→сукшма→прана)
+function dashaLevels(tl,ms){
+  const el=(ms-tl.birthMs)/86400000; const find=a=>a.find(x=>el>=x.startDay&&el<x.endDay);
+  const maha=find(tl.mahas); if(!maha) return null;
+  const A=subPeriods(maha.lord,maha.startDay,maha.endDay-maha.startDay); const an=find(A)||A[0];
+  const P=subPeriods(an.lord,an.startDay,an.endDay-an.startDay); const pr=find(P)||P[0];
+  const S=subPeriods(pr.lord,pr.startDay,pr.endDay-pr.startDay); const so=find(S)||S[0];
+  const R=subPeriods(so.lord,so.startDay,so.endDay-so.startDay); const pa=find(R)||R[0];
+  return {maha:maha.lord, antar:an.lord, prat:pr.lord, sook:so.lord, prana:pa.lord,
+          mahaSeg:maha, antarSeg:an, pratSeg:pr};
+}
+// смены даши заданного уровня в окне [msA,msB]; level: 1=маха 2=антара 3=пратьянтара
+function dashaSegments(tl, msA, msB, level){
+  const dayA=(msA-tl.birthMs)/86400000, dayB=(msB-tl.birthMs)/86400000;
+  let segs=tl.mahas.map(m=>({lord:m.lord,startDay:m.startDay,endDay:m.endDay,path:[m.lord]}));
+  for(let L=2;L<=level;L++){
+    const next=[];
+    for(const s of segs){ for(const sub of subPeriods(s.lord,s.startDay,s.endDay-s.startDay))
+      next.push({lord:sub.lord,startDay:sub.startDay,endDay:sub.endDay,path:s.path.concat(sub.lord)}); }
+    segs=next;
+  }
+  return segs.filter(s=>s.endDay>dayA && s.startDay<dayB).map(s=>({
+    path:s.path, msStart:tl.birthMs+s.startDay*86400000, msEnd:tl.birthMs+s.endDay*86400000
+  }));
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   БАЗОВЫЕ ФУНКЦИИ ЗНАКОВ / ДОМОВ
+   ════════════════════════════════════════════════════════════════════ */
+const SIGN_LORD=['Mars','Venus','Mercury','Moon','Sun','Mercury','Venus','Mars','Jupiter','Saturn','Saturn','Jupiter'];
+const SIGN_RU=['Овен','Телец','Близнецы','Рак','Лев','Дева','Весы','Скорпион','Стрелец','Козерог','Водолей','Рыбы'];
+const NAKSHATRAS=['Ашвини','Бхарани','Криттика','Рохини','Мригашира','Ардра','Пунарвасу','Пушья','Ашлеша','Магха','Пурва Пхалгуни','Уттара Пхалгуни','Хаста','Читра','Свати','Вишакха','Анурадха','Джйештха','Мула','Пурва Ашадха','Уттара Ашадха','Шравана','Дхаништха','Шатабхиша','Пурва Бхадрапада','Уттара Бхадрапада','Ревати'];
+const PLANETS9=['Sun','Moon','Mars','Mercury','Jupiter','Venus','Saturn','Rahu','Ketu'];
+function signIdx(lon){return Math.floor(nd(lon)/30);}
+function houseFromLagna(lon,lagLon){return((signIdx(lon)-signIdx(lagLon)+12)%12)+1;}
+function relHouse(fromSign,toSign){return((toSign-fromSign+12)%12)+1;}
+function lordOfHouse(chart,house){ const sign=(signIdx(chart.pos.Lagna)+house-1)%12; return SIGN_LORD[sign]; }
+function planetsInHouse(chart,house){ const out=[]; for(const k of PLANETS9) if(houseFromLagna(chart.pos[k],chart.pos.Lagna)===house) out.push(k); return out; }
+function housesRuledBy(chart,planet){ const lag=signIdx(chart.pos.Lagna); const out=[]; for(let s=0;s<12;s++) if(SIGN_LORD[s]===planet) out.push(((s-lag+12)%12)+1); return out; }
+
+/* ════════════════════════════════════════════════════════════════════
+   АШТАКАВАРГА (Парашари) — бинду по знакам для каждой планеты + Сарва
+   Таблицы: благоприятные дома от 8 сигнификаторов (7 планет + Лагна).
+   Контрольные суммы БАВ: Солнце48 Луна49 Марс39 Меркурий54 Юпитер56
+   Венера52 Сатурн39 → Сарва 337.
+   ════════════════════════════════════════════════════════════════════ */
+const AV={
+  Sun:{Sun:[1,2,4,7,8,9,10,11],Moon:[3,6,10,11],Mars:[1,2,4,7,8,9,10,11],Mercury:[3,5,6,9,10,11,12],Jupiter:[5,6,9,11],Venus:[6,7,12],Saturn:[1,2,4,7,8,9,10,11],Lagna:[3,4,6,10,11,12]},
+  Moon:{Sun:[3,6,7,8,10,11],Moon:[1,3,6,7,10,11],Mars:[2,3,5,6,9,10,11],Mercury:[1,3,4,5,7,8,10,11],Jupiter:[1,2,4,7,8,10,11],Venus:[3,4,5,7,9,10,11],Saturn:[3,5,6,11],Lagna:[3,6,10,11]},
+  Mars:{Sun:[3,5,6,10,11],Moon:[3,6,11],Mars:[1,2,4,7,8,10,11],Mercury:[3,5,6,11],Jupiter:[6,10,11,12],Venus:[6,8,11,12],Saturn:[1,4,7,8,9,10,11],Lagna:[1,3,6,10,11]},
+  Mercury:{Sun:[5,6,9,11,12],Moon:[2,4,6,8,10,11],Mars:[1,2,4,7,8,9,10,11],Mercury:[1,3,5,6,9,10,11,12],Jupiter:[6,8,11,12],Venus:[1,2,3,4,5,8,9,11],Saturn:[1,2,4,7,8,9,10,11],Lagna:[1,2,4,6,8,10,11]},
+  Jupiter:{Sun:[1,2,3,4,7,8,9,10,11],Moon:[2,5,7,9,11],Mars:[1,2,4,7,8,10,11],Mercury:[1,2,4,5,6,9,10,11],Jupiter:[1,2,3,4,7,8,10,11],Venus:[2,5,6,9,10,11],Saturn:[3,5,6,12],Lagna:[1,2,4,5,6,7,9,10,11]},
+  Venus:{Sun:[8,11,12],Moon:[1,2,3,4,5,8,9,11,12],Mars:[3,5,6,9,11,12],Mercury:[3,5,6,9,11],Jupiter:[5,8,9,10,11],Venus:[1,2,3,4,5,8,9,10,11],Saturn:[3,4,5,8,9,10,11],Lagna:[1,2,3,4,5,8,9,11]},
+  Saturn:{Sun:[1,2,4,7,8,10,11],Moon:[3,6,11],Mars:[3,5,6,10,11,12],Mercury:[6,8,9,10,11,12],Jupiter:[5,6,11,12],Venus:[6,11,12],Saturn:[3,5,6,11],Lagna:[1,3,4,6,10,11]}
+};
+function computeAshtakavarga(pos){
+  const refs={Sun:signIdx(pos.Sun),Moon:signIdx(pos.Moon),Mars:signIdx(pos.Mars),Mercury:signIdx(pos.Mercury),
+    Jupiter:signIdx(pos.Jupiter),Venus:signIdx(pos.Venus),Saturn:signIdx(pos.Saturn),Lagna:signIdx(pos.Lagna)};
+  const bav={}, sav=new Array(12).fill(0);
+  for(const planet in AV){
+    const arr=new Array(12).fill(0), tbl=AV[planet];
+    for(const c in tbl){ const r=refs[c]; for(const h of tbl[c]) arr[(r+h-1)%12]++; }
+    bav[planet]=arr; for(let i=0;i<12;i++) sav[i]+=arr[i];
+  }
+  return {bav, sav};
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   ГОЧАРА — благоприятные дома от Луны (Пхаладипика) + краткие эффекты
+   ════════════════════════════════════════════════════════════════════ */
+const GOCHARA_GOOD={Sun:[3,6,10,11],Moon:[1,3,6,7,10,11],Mars:[3,6,11],Mercury:[2,4,6,8,10,11],
+  Jupiter:[2,5,7,9,11],Venus:[1,2,3,4,5,8,9,11,12],Saturn:[3,6,11],Rahu:[3,6,10,11],Ketu:[3,6,11]};
+const GOCHARA_NOTE={
+  Sun:{g:'прилив сил, признание, поддержка начальства, продвижение дел.',b:'спад энергии, трения с властью и отцом, усталость.'},
+  Moon:{g:'ровный эмоциональный фон, поддержка окружения, лёгкость в общении.',b:'переменчивое настроение, тревожность, усталость ума.'},
+  Mars:{g:'смелость, инициатива, победа над соперниками, деловая энергия.',b:'раздражительность, конфликты, риск травм и ссор, спешка.'},
+  Mercury:{g:'ясность ума, удачные переговоры, учёба, торговля, связи.',b:'путаница в делах и словах, недопонимания, нервозность.'},
+  Jupiter:{g:'удача, покровительство, рост, благоприятно для семьи, детей, знаний.',b:'застой в росте, избыточность, ослабление опоры и оптимизма.'},
+  Venus:{g:'гармония в отношениях, комфорт, творчество, приятные приобретения.',b:'охлаждение в любви, лишние траты, недовольство в союзе.'},
+  Saturn:{g:'дисциплина даёт плоды, устойчивый труд, признание упорства.',b:'нагрузка, задержки, ответственность, усталость, испытания.'},
+  Rahu:{g:'нестандартные возможности, рост через новое и зарубежное.',b:'наваждения, тревога, запутанные обстоятельства, иллюзии.'},
+  Ketu:{g:'отрешённость помогает, интуиция, завершение старого.',b:'потери, неясность целей, уход энергии, изоляция.'}
+};
+
+/* ── ПАНЧАНГА ── */
+const TITHI_BASE=['Пратипада','Двития','Трития','Чатуртхи','Панчами','Шаштхи','Саптами','Аштами','Навами','Дашами','Экадаши','Двадаши','Трайодаши','Чатурдаши'];
+function tithiName(idx){ // 0..29
+  if(idx===14) return 'Пурнима (полнолуние)';
+  if(idx===29) return 'Амавасья (новолуние)';
+  const paksha=idx<15?'Шукла':'Кришна'; return paksha+' '+TITHI_BASE[idx%15];
+}
+const YOGAS=['Вишкамбха','Прити','Аюшман','Саубхагья','Шобхана','Атиганда','Сукарма','Дхрити','Шула','Ганда','Вриддхи','Дхрува','Вьягхата','Харшана','Ваджра','Сиддхи','Вьятипата','Варияна','Паригха','Шива','Сиддха','Садхья','Шубха','Шукла','Брахма','Индра','Вайдхрити'];
+const YOGA_BAD=new Set([0,5,8,9,12,14,16,18,26]); // Вишкамбха,Атиганда,Шула,Ганда,Вьягхата,Ваджра,Вьятипата,Паригха,Вайдхрити
+const WEEKDAYS=['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
+const VARA_LORD=['Sun','Moon','Mars','Mercury','Jupiter','Venus','Saturn'];
+function karanaName(h){ // h=0..59 (half-tithi)
+  if(h===0) return 'Кимстугхна';
+  if(h>=57) return ['Шакуни','Чатушпада','Нага'][h-57];
+  return ['Бава','Балава','Каулава','Тайтила','Гара','Ваниджа','Вишти (Бхадра)'][(h-1)%7];
+}
+function panchanga(ms){
+  const sun=bodySid(ms,'Sun'), moon=bodySid(ms,'Moon');
+  const diff=nd(moon-sun);
+  const tithiIdx=Math.floor(diff/12);
+  const nakIdx=Math.floor(nd(moon)/(360/27));
+  const yogaIdx=Math.floor(nd(sun+moon)/(360/27))%27;
+  const karIdx=Math.floor(diff/6);
+  const wd=new Date(ms).getUTCDay(); // приблизительно; для показа
+  return {tithiIdx,nakIdx,yogaIdx,karIdx,moon,sun,diff};
+}
+
+/* ── СМЕНЫ ЗНАКА (общий сканер с бинарным уточнением границы) ── */
+function refineSignBoundary(key,t0,t1){
+  const s0=signAtKey(key,t0);
+  for(let i=0;i<44;i++){ const tm=(t0+t1)/2; if(signAtKey(key,tm)===s0) t0=tm; else t1=tm; }
+  return t1;
+}
+function signChanges(key,msA,msB,stepMs){
+  const out=[]; let prev=signAtKey(key,msA), t=msA;
+  while(t<msB){
+    const tn=Math.min(t+stepMs,msB), s=signAtKey(key,tn);
+    if(s!==prev){ const b=refineSignBoundary(key,t,tn); out.push({ms:b,from:prev,to:signAtKey(key,b+1000)}); prev=signAtKey(key,tn); }
+    t=tn;
+  }
+  return out;
+}
+
+/* ── САДЕ-САТИ / малая панчоти ── */
+function shaniStatus(moonSign, ms){
+  const rel=relHouse(moonSign, signAtKey('Saturn',ms));
+  let phase=null, small=null;
+  if(rel===12) phase='восходящая (12-й от Луны)';
+  else if(rel===1) phase='пик (над Луной, 1-й)';
+  else if(rel===2) phase='нисходящая (2-й от Луны)';
+  if(rel===4) small='Канта́ка-Шани (4-й от Луны)';
+  if(rel===8) small='Аштама-Шани (8-й от Луны)';
+  return {rel, phase, small, active:!!phase};
+}
+function sadeSatiWindow(moonSign, targetMs){
+  const inSS=ms=>{ const r=relHouse(moonSign,signAtKey('Saturn',ms)); return r===12||r===1||r===2; };
+  const A=targetMs-12*VYEAR*MS_DAY, B=targetMs+18*VYEAR*MS_DAY, STEP=12*MS_DAY;
+  const runs=[]; let cur=null;
+  for(let t=A;t<=B;t+=STEP){
+    if(inSS(t)){ if(!cur) cur={start:t,end:t}; else cur.end=t; }
+    else if(cur){ runs.push(cur); cur=null; }
+  }
+  if(cur) runs.push(cur);
+  // слить прогоны, разделённые ретро-мерцанием (< 200 дней)
+  const merged=[];
+  for(const r of runs){ const last=merged[merged.length-1];
+    if(last && r.start-last.end < 200*MS_DAY) last.end=r.end; else merged.push({...r}); }
+  // уточнить границы до дня
+  for(const r of merged){
+    let a0=r.start-STEP, a1=r.start; for(let i=0;i<40;i++){const m=(a0+a1)/2; if(inSS(m))a1=m; else a0=m;} r.start=a1;
+    let b0=r.end, b1=r.end+STEP; for(let i=0;i<40;i++){const m=(b0+b1)/2; if(inSS(m))b0=m; else b1=m;} r.end=b0;
+  }
+  const containing=merged.find(r=>targetMs>=r.start&&targetMs<=r.end);
+  const next=merged.find(r=>r.start>targetMs);
+  return {current:containing||null, next:next||null};
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   ИНТЕРПРЕТАЦИИ (русский)
+   ════════════════════════════════════════════════════════════════════ */
+const KARAKA={
+  Sun:'воля, статус, отец, здоровье, признание',
+  Moon:'ум, эмоции, мать, дом, отношения с людьми',
+  Mars:'энергия, смелость, конфликты, недвижимость, братья',
+  Mercury:'интеллект, речь, торговля, учёба, связи',
+  Jupiter:'мудрость, удача, дети, богатство, дхарма, наставники',
+  Venus:'любовь, брак, красота, комфорт, искусство, партнёрство',
+  Saturn:'труд, дисциплина, задержки, карма, долголетие, аскеза',
+  Rahu:'амбиции, заграница, технологии, наваждения, внезапные перемены',
+  Ketu:'духовность, отрешённость, потери, освобождение, исследование'
+};
+const HOUSE_MEAN=['личность, тело, здоровье, новые начинания','деньги, семья, речь, накопления',
+  'усилия, смелость, братья и сёстры, короткие поездки','дом, мать, недвижимость, покой ума',
+  'дети, творчество, учёба, романтика, заслуги прошлого','работа, служба, болезни, долги, соперники',
+  'брак, партнёрство, договоры, публичные связи','кризисы и перемены, наследство, тайное, долголетие',
+  'удача, дхарма, отец, наставники, дальние путешествия','карьера, статус, репутация','доходы, прибыль, друзья, исполнение желаний',
+  'расходы, потери, заграница, уединение, освобождение'];
+const NAT_BENEFIC=new Set(['Jupiter','Venus','Mercury','Moon']);
+const NAT_MALEFIC=new Set(['Saturn','Mars','Sun','Rahu','Ketu']);
+
+function housesText(hs){ return hs.map(h=>h+'-й').join(' и '); }
+function themesOf(hs){ const set=[...new Set(hs.map(h=>HOUSE_MEAN[h-1]))]; return set.join('; '); }
+function dashaLordDesc(chart, lord){
+  const ruled=housesRuledBy(chart,lord);
+  const occ=houseFromLagna(chart.pos[lord],chart.pos.Lagna);
+  let s='<b>'+DASHA_RU[lord]+'</b> — '+KARAKA[lord]+'. ';
+  if(ruled.length) s+='Управляет '+housesText(ruled)+' домом ('+themesOf(ruled)+'). ';
+  s+='Стоит в '+occ+'-м доме ('+HOUSE_MEAN[occ-1]+').';
+  return s;
+}
+function dashaTone(lord){ return NAT_BENEFIC.has(lord)?0.5 : (NAT_MALEFIC.has(lord)? -0.4 : 0); }
+
+const TARA=[
+  {n:'Джанма (рождения)',t:'mix',s:'тело и жизненная сила — берегите здоровье, без резких начинаний.'},
+  {n:'Сампат (богатство)',t:'good',s:'благоприятно: прибыль, удача, приобретения.'},
+  {n:'Випат (беда)',t:'bad',s:'неблагоприятно: препятствия, потери — осторожность в делах.'},
+  {n:'Кшема (благополучие)',t:'good',s:'благоприятно: устойчивость, поддержка, хорошее время для важного.'},
+  {n:'Пратьяри (помехи)',t:'bad',s:'неблагоприятно: сопротивление, соперники — не форсируйте.'},
+  {n:'Садхака (достижение)',t:'good',s:'благоприятно: цели достигаются, дела спорятся.'},
+  {n:'Вадха (гибель)',t:'bad',s:'самое сложное: избегайте риска и новых начинаний.'},
+  {n:'Митра (друг)',t:'good',s:'благоприятно: помощь друзей, приятные встречи.'},
+  {n:'Ати-митра (лучший друг)',t:'good',s:'очень благоприятно: удача и поддержка со всех сторон.'}
+];
+function taraBala(birthNak, moonNak){
+  const cnt=((moonNak-birthNak+27)%27)+1;
+  const idx=((cnt-1)%9);
+  return {idx, ...TARA[idx]};
+}
+const CHANDRA_FAV=[1,3,6,7,10,11], CHANDRA_MED=[2,5,9], CHANDRA_WEAK=[4,8,12];
+function chandraBala(natalMoonSign, moonSign){
+  const rel=relHouse(natalMoonSign,moonSign);
+  let t='med', s='нейтральное положение Луны от натальной ('+rel+'-й).';
+  if(CHANDRA_FAV.includes(rel)){t='good'; s='сильная чандра-бала ('+rel+'-й от натальной Луны) — эмоциональная опора, удачное время.';}
+  else if(CHANDRA_WEAK.includes(rel)){t='bad'; s='слабая чандра-бала ('+rel+'-й от натальной Луны) — упадок сил, беречь ум и тело.';}
+  else s='средняя чандра-бала ('+rel+'-й от натальной Луны).';
+  return {rel,t,s};
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   ФОРМАТ ДАТ
+   ════════════════════════════════════════════════════════════════════ */
+const MONTHS=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+let FZONE='Europe/Moscow'; // пояс прогноза (= пояс места рождения)
+function fmtD(ms){ const m=moment.tz(ms,FZONE); return m.date()+' '+MONTHS[m.month()]+' '+m.year(); }
+function fmtDShort(ms){ const m=moment.tz(ms,FZONE); return String(m.date()).padStart(2,'0')+'.'+String(m.month()+1).padStart(2,'0')+'.'+m.year(); }
+function fmtDM(ms){ const m=moment.tz(ms,FZONE); return m.date()+' '+MONTHS[m.month()]; }
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function tagFor(t){ return t==='good'?'<span class="tag g">благоприятно</span>':t==='bad'?'<span class="tag b">напряжённо</span>':'<span class="tag n">нейтрально</span>'; }
+
+/* ════════════════════════════════════════════════════════════════════
+   ПОИСК МЕСТА + ЧАСОВОЙ ПОЯС
+   ════════════════════════════════════════════════════════════════════ */
+let META=null,C_lat,C_lon,C_admin,C_zone,C_name,C_norm,CITIES_READY=false;
+function normRu(s){ return s.toLowerCase().replace(/ё/g,'е').replace(/[’'`]/g,'').trim(); }
+async function loadCities(){
+  const status=document.getElementById('cityChosen');
+  try{
+    const [metaResp, gzResp]=await Promise.all([fetch('data/cities-meta.json'),fetch('data/cities.txt.gz')]);
+    META=await metaResp.json();
+    let text;
+    if('DecompressionStream' in window){
+      const ds=new DecompressionStream('gzip');
+      text=await new Response(gzResp.body.pipeThrough(ds)).text();
+    }else{ text=await (await fetch('data/cities.txt')).text(); }
+    const lines=text.split('\n'); const n=lines.length-1;
+    C_lat=new Int32Array(n); C_lon=new Int32Array(n); C_admin=new Int32Array(n); C_zone=new Int32Array(n);
+    C_name=new Array(n); C_norm=new Array(n); let k=0;
+    for(let i=0;i<n;i++){ const ln=lines[i]; if(!ln) continue; const t=ln.split('\t');
+      C_name[k]=t[0]; C_norm[k]=normRu(t[0]); C_lat[k]=+t[1]; C_lon[k]=+t[2]; C_admin[k]=+t[3]; C_zone[k]=+t[4]; k++; }
+    if(k<n){ C_name.length=k; C_norm.length=k; }
+    CITIES_READY=true; status.textContent=''; buildManualZones();
+  }catch(e){
+    console.warn('cities load failed',e);
+    status.innerHTML='<span class="err">База мест не загрузилась.</span> Запустите через локальный сервер либо укажите пояс и координаты вручную.';
+    buildManualZones();
+  }
+}
+function searchCities(q){
+  q=normRu(q); if(q.length<2) return [];
+  const pre=[], inc=[], LIMIT=40;
+  for(let i=0;i<C_norm.length;i++){ const s=C_norm[i], p=s.indexOf(q);
+    if(p===0){ if(pre.length<LIMIT) pre.push(i); } else if(p>0 && inc.length<LIMIT) inc.push(i);
+    if(pre.length>=LIMIT) break; }
+  return pre.concat(inc).slice(0,LIMIT);
+}
+let acItems=[], acActive=-1, selected=null;
+const cityInput=document.getElementById('city');
+const acDrop=document.getElementById('acDrop');
+const cityChosen=document.getElementById('cityChosen');
+let acTimer=null;
+cityInput.addEventListener('input',()=>{ selected=null; cityChosen.textContent=''; clearTimeout(acTimer); acTimer=setTimeout(runSearch,110); });
+cityInput.addEventListener('keydown',e=>{
+  if(acDrop.hidden) return;
+  if(e.key==='ArrowDown'){ e.preventDefault(); moveAc(1); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); moveAc(-1); }
+  else if(e.key==='Enter'){ if(acActive>=0){ e.preventDefault(); pickCity(acItems[acActive]); } }
+  else if(e.key==='Escape'){ hideAc(); }
+});
+document.addEventListener('click',e=>{ if(!e.target.closest('.city-wrap')) hideAc(); });
+function runSearch(){
+  if(!CITIES_READY) return;
+  const q=cityInput.value; acItems=searchCities(q);
+  if(!q.trim() || acItems.length===0){
+    if(q.trim().length>=2){ acDrop.innerHTML='<div class="ac-empty">Ничего не найдено. Укажите пояс и координаты вручную ниже.</div>'; acDrop.hidden=false; }
+    else hideAc();
+    acActive=-1; return;
+  }
+  acDrop.innerHTML=acItems.map((idx,j)=>
+    '<div class="ac-item'+(j===0?' active':'')+'" data-j="'+j+'">'+
+      '<div class="ac-name">'+esc(C_name[idx])+'</div>'+
+      '<div class="ac-admin">'+esc(META.admins[C_admin[idx]]||'')+'</div></div>').join('');
+  acActive=0; acDrop.hidden=false;
+  acDrop.querySelectorAll('.ac-item').forEach(el=>el.addEventListener('click',()=>pickCity(acItems[+el.dataset.j])));
+}
+function moveAc(dir){
+  const els=acDrop.querySelectorAll('.ac-item'); if(!els.length) return;
+  if(acActive>=0) els[acActive].classList.remove('active');
+  acActive=(acActive+dir+els.length)%els.length;
+  els[acActive].classList.add('active'); els[acActive].scrollIntoView({block:'nearest'});
+}
+function hideAc(){ acDrop.hidden=true; acActive=-1; }
+function pickCity(idx){
+  selected={ name:C_name[idx], admin:META.admins[C_admin[idx]]||'', lat:C_lat[idx]/1e4, lon:C_lon[idx]/1e4, zone:META.zones[C_zone[idx]] };
+  cityInput.value=C_name[idx]; hideAc();
+  cityChosen.innerHTML='<b>'+esc(selected.name)+'</b>, '+esc(selected.admin)+
+    ' · пояс <b>'+esc(selected.zone)+'</b> · '+selected.lat.toFixed(3)+', '+selected.lon.toFixed(3);
+}
+const MANUAL_ZONES=[
+  ['Россия и СНГ',[
+    ['Europe/Kaliningrad','Калининград (МСК−1)'],['Europe/Moscow','Москва, Санкт-Петербург (МСК)'],
+    ['Europe/Samara','Самара, Ижевск (МСК+1)'],['Asia/Yekaterinburg','Екатеринбург, Пермь, Уфа (МСК+2)'],
+    ['Asia/Omsk','Омск (МСК+3)'],['Asia/Novosibirsk','Новосибирск (МСК+4)'],
+    ['Asia/Krasnoyarsk','Красноярск, Барнаул (МСК+4)'],['Asia/Irkutsk','Иркутск (МСК+5)'],
+    ['Asia/Yakutsk','Якутск (МСК+6)'],['Asia/Vladivostok','Владивосток, Хабаровск (МСК+7)'],
+    ['Asia/Magadan','Магадан, Сахалин (МСК+8)'],['Asia/Kamchatka','Петропавловск-Камчатский (МСК+9)'],
+    ['Europe/Kyiv','Киев (Украина)'],['Europe/Minsk','Минск (Беларусь)'],['Europe/Chisinau','Кишинёв (Молдова)'],
+    ['Asia/Almaty','Алматы, Астана (Казахстан)'],['Asia/Tashkent','Ташкент (Узбекистан)'],
+    ['Asia/Bishkek','Бишкек (Киргизия)'],['Asia/Dushanbe','Душанбе (Таджикистан)'],
+    ['Asia/Ashgabat','Ашхабад (Туркмения)'],['Asia/Tbilisi','Тбилиси (Грузия)'],
+    ['Asia/Yerevan','Ереван (Армения)'],['Asia/Baku','Баку (Азербайджан)'],
+    ['Europe/Riga','Рига (Латвия)'],['Europe/Vilnius','Вильнюс (Литва)'],['Europe/Tallinn','Таллин (Эстония)']
+  ]],
+  ['Мир',[
+    ['Europe/London','Лондон'],['Europe/Berlin','Берлин, Рим, Париж'],['Europe/Athens','Афины, Хельсинки'],
+    ['Asia/Jerusalem','Иерусалим'],['Asia/Dubai','Дубай'],['Asia/Kolkata','Индия (Дели, Мумбаи)'],
+    ['Asia/Shanghai','Пекин, Шанхай'],['Asia/Tokyo','Токио'],['Australia/Sydney','Сидней'],
+    ['America/New_York','Нью-Йорк'],['America/Chicago','Чикаго'],['America/Los_Angeles','Лос-Анджелес']
+  ]]
+];
+function buildManualZones(){
+  const sel=document.getElementById('tzManual'); sel.innerHTML='';
+  for(const [grp,zs] of MANUAL_ZONES){ const og=document.createElement('optgroup'); og.label=grp;
+    for(const [z,lbl] of zs){ const o=document.createElement('option'); o.value=z; o.textContent=lbl;
+      if(z==='Europe/Moscow') o.selected=true; og.appendChild(o); }
+    sel.appendChild(og); }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   ИНТЕРФЕЙС
+   ════════════════════════════════════════════════════════════════════ */
+let PERIOD='month';
+document.getElementById('periodSel').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  PERIOD=b.dataset.p;
+  document.querySelectorAll('#periodSel button').forEach(x=>x.classList.toggle('on',x===b));
+});
+document.getElementById('calcBtn').addEventListener('click',runForecast);
+
+function periodBounds(zone, tdate, ttime){
+  const [ty,tm,td]=tdate.split('-').map(Number);
+  const [th,tmin]=(ttime||'12:00').split(':').map(Number);
+  const anchor=moment.tz([ty,tm-1,td,th,tmin],zone).valueOf();
+  const dayStart=moment.tz([ty,tm-1,td,0,0],zone).valueOf();
+  let start=dayStart, end;
+  if(PERIOD==='day'){ end=moment.tz(dayStart,zone).add(1,'day').valueOf(); }
+  else if(PERIOD==='week'){ start=anchor; end=moment.tz(anchor,zone).add(7,'day').valueOf(); }
+  else if(PERIOD==='month'){ start=anchor; end=moment.tz(anchor,zone).add(1,'month').valueOf(); }
+  else if(PERIOD==='year'){ start=anchor; end=moment.tz(anchor,zone).add(1,'year').valueOf(); }
+  else { start=anchor; end=moment.tz(anchor,zone).add(5,'year').valueOf(); }
+  return {anchor,start,end};
+}
+
+async function runForecast(){
+  const res=document.getElementById('result');
+  res.innerHTML='<p class="note">Расчёт…</p>';
+  await ensureEngine();
+
+  // — сбор ввода —
+  const bdate=document.getElementById('bdate').value;
+  const btime=document.getElementById('btime').value;
+  const tdate=document.getElementById('tdate').value;
+  const ttime=document.getElementById('ttime').value||'12:00';
+  if(!bdate||!btime){ res.innerHTML='<p class="err">Укажите дату и время рождения.</p>'; return; }
+  if(!tdate){ res.innerHTML='<p class="err">Укажите дату прогноза.</p>'; return; }
+
+  let lat,lon,zone;
+  if(selected){ lat=selected.lat; lon=selected.lon; zone=selected.zone; }
+  else{
+    lat=parseFloat(document.getElementById('latManual').value);
+    lon=parseFloat(document.getElementById('lonManual').value);
+    zone=document.getElementById('tzManual').value;
+    if(!isFinite(lat)||!isFinite(lon)){ res.innerHTML='<p class="err">Выберите место рождения из списка или задайте координаты и пояс вручную.</p>'; return; }
+  }
+  FZONE=zone;
+
+  const [by,bmo,bd]=bdate.split('-').map(Number);
+  const [bh,bmi]=btime.split(':').map(Number);
+  const bOff=moment.tz([by,bmo-1,bd,bh,bmi],zone).utcOffset()/60;
+  const chart=computeChart(by,bmo,bd,bh,bmi,bOff,lat,lon);
+  const tl=buildTimeline(chart);
+  const {anchor,start,end}=periodBounds(zone,tdate,ttime);
+
+  const natalMoonSign=signIdx(chart.pos.Moon);
+  const natalMoonNak=Math.floor(nd(chart.pos.Moon)/(360/27));
+  const lagSign=signIdx(chart.pos.Lagna);
+  const ashta=computeAshtakavarga(chart.pos);
+
+  try{
+    let html='';
+    html+=natalBlock(chart,natalMoonSign,natalMoonNak,lagSign);
+    if(PERIOD==='day') html+=renderDay(chart,tl,anchor,start,end,natalMoonSign,natalMoonNak,lagSign,ashta);
+    else if(PERIOD==='week') html+=renderWeek(chart,tl,start,end,natalMoonSign,natalMoonNak,lagSign,ashta);
+    else if(PERIOD==='month') html+=renderMonth(chart,tl,start,end,natalMoonSign,natalMoonNak,lagSign,ashta);
+    else if(PERIOD==='year') html+=renderYear(chart,tl,start,end,natalMoonSign,natalMoonNak,lagSign,ashta);
+    else html+=renderFive(chart,tl,start,end,natalMoonSign,natalMoonNak,lagSign,ashta);
+    html+=footerNote();
+    res.innerHTML=html;
+  }catch(err){
+    console.error(err);
+    res.innerHTML='<p class="err">Ошибка расчёта: '+esc(err.message)+'</p>';
+  }
+}
+
+function natalBlock(chart,moonSign,moonNak,lagSign){
+  const rows=['Lagna','Sun','Moon','Mars','Mercury','Jupiter','Venus','Saturn','Rahu','Ketu'].map(k=>{
+    const lon=chart.pos[k], si=signIdx(lon), deg=(nd(lon)%30);
+    const nm=k==='Lagna'?'Лагна':DASHA_RU[k];
+    const h=houseFromLagna(lon,chart.pos.Lagna);
+    return '<tr><td><b>'+nm+'</b></td><td>'+SIGN_RU[si]+' '+deg.toFixed(1)+'°</td><td class="num">'+h+'</td></tr>';
+  }).join('');
+  return '<details class="natal"><summary>Карта рождения (Раши D1)</summary>'+
+    '<p class="note">Лагна — <b>'+SIGN_RU[lagSign]+'</b>; Луна — <b>'+SIGN_RU[moonSign]+'</b>, накшатра <b>'+NAKSHATRAS[moonNak]+'</b>.</p>'+
+    '<table class="rtable"><thead><tr><th>Планета</th><th>Знак</th><th>Дом</th></tr></thead><tbody>'+rows+'</tbody></table></details>';
+}
+
+function dashaHeadline(tl,ms,levels){
+  const d=dashaLevels(tl,ms);
+  const names=[d.maha,d.antar,d.prat,d.sook,d.prana].slice(0,levels).map(x=>DASHA_RU[x]);
+  return {d, str:names.join(' → ')};
+}
+
+function verdict(score,titleWord){
+  let label,cls;
+  if(score>=2){label='Благоприятный период';}
+  else if(score>=0.8){label='В целом благоприятно';}
+  else if(score>=-0.6){label='Смешанный период';}
+  else if(score>=-1.8){label='Требует осторожности';}
+  else {label='Напряжённый период';}
+  return label;
+}
+
+/* ── ГОЧАРА: строка по планете от Луны ── */
+function gocharaRow(key,ms,moonSign){
+  const si=signAtKey(key,ms);
+  const rel=relHouse(moonSign,si);
+  const good=GOCHARA_GOOD[key].includes(rel);
+  const retro=isRetro(ms,key);
+  const note=good?GOCHARA_NOTE[key].g:GOCHARA_NOTE[key].b;
+  return {key,si,rel,good,retro,note};
+}
+
+/* ── ДЕНЬ ── */
+function renderDay(chart,tl,anchor,start,end,moonSign,moonNak,lagSign,ashta){
+  const dh=dashaHeadline(tl,anchor,5);
+  const pan=panchanga(anchor);
+  const wd=moment.tz(anchor,FZONE).day();
+  const moonNow=bodySid(anchor,'Moon');
+  const moonSignNow=signIdx(moonNow), moonNakNow=Math.floor(nd(moonNow)/(360/27));
+  const tara=taraBala(moonNak,moonNakNow);
+  const ch=chandraBala(moonSign,moonSignNow);
+  // счёт дня
+  let score=dashaTone(dh.d.antar)+dashaTone(dh.d.prat);
+  score+=ch.t==='good'?1:ch.t==='bad'?-1:0;
+  score+=tara.t==='good'?1:tara.t==='bad'?-1:0;
+  const moonG=GOCHARA_GOOD.Moon.includes(ch.rel); score+=moonG?0.5:-0.5;
+  if(YOGA_BAD.has(pan.yogaIdx)) score-=0.5;
+  const karHalf=Math.floor(pan.diff/6); if(karanaName(karHalf).startsWith('Вишти')) score-=0.5;
+
+  let h='<div class="verdict-card"><div class="verdict-label">Прогноз на день · '+fmtD(anchor)+'</div>'+
+    '<div class="verdict-title">'+verdict(score)+'</div>'+
+    '<div class="verdict-sub">'+esc(dh.str)+'</div></div>';
+
+  // Даша
+  h+='<div class="block-title">Вимшоттари-даша</div>';
+  h+='<div class="card"><p class="sub">Активные периоды на этот день</p><p>'+esc(dh.str)+'</p>'+
+    '<p class="why">'+dashaLordDesc(chart,dh.d.antar)+'</p>'+
+    '<p class="why">Пратьянтара: '+dashaLordDesc(chart,dh.d.prat)+'</p></div>';
+
+  // Панчанга
+  const karname=karanaName(Math.floor(pan.diff/6));
+  h+='<div class="block-title">Панчанга дня</div>';
+  h+='<div class="card"><table class="rtable"><tbody>'+
+    '<tr><td>Вара (день недели)</td><td>'+WEEKDAYS[wd]+' · '+DASHA_RU[VARA_LORD[wd]]+'</td></tr>'+
+    '<tr><td>Титхи</td><td>'+tithiName(pan.tithiIdx)+'</td></tr>'+
+    '<tr><td>Накшатра Луны</td><td>'+NAKSHATRAS[pan.nakIdx]+'</td></tr>'+
+    '<tr class="'+(YOGA_BAD.has(pan.yogaIdx)?'bad':'')+'"><td>Йога</td><td>'+YOGAS[pan.yogaIdx]+(YOGA_BAD.has(pan.yogaIdx)?' (сложная)':'')+'</td></tr>'+
+    '<tr class="'+(karname.startsWith('Вишти')?'bad':'')+'"><td>Карана</td><td>'+karname+(karname.startsWith('Вишти')?' — считается неблагоприятной для важных начинаний':'')+'</td></tr>'+
+    '</tbody></table></div>';
+
+  // Луна / тара / чандра
+  h+='<div class="block-title">Луна дня: тара-бала и чандра-бала</div>';
+  h+='<div class="card"><p>Луна в знаке <b>'+SIGN_RU[moonSignNow]+'</b>, накшатра <b>'+NAKSHATRAS[moonNakNow]+'</b>.</p>'+
+    '<p class="why">'+tagFor(tara.t)+' <b>Тара '+tara.n+'</b> — '+tara.s+'</p>'+
+    '<p class="why">'+tagFor(ch.t)+' Чандра-бала — '+ch.s+'</p></div>';
+
+  // Быстрые транзиты
+  h+='<div class="block-title">Транзиты над натальной Луной</div>';
+  h+='<p class="block-lead">Быстрые планеты и их влияние сегодня (дом от Луны рождения).</p>';
+  h+='<table class="rtable"><thead><tr><th>Планета</th><th>Знак</th><th>Дом от Луны</th><th>Влияние</th></tr></thead><tbody>';
+  for(const key of ['Sun','Moon','Mercury','Venus','Mars']){
+    const g=gocharaRow(key,anchor,moonSign);
+    h+='<tr class="'+(g.good?'good':'bad')+'"><td><b>'+DASHA_RU[key]+'</b>'+(g.retro?' <span class="tag r">R</span>':'')+'</td>'+
+      '<td>'+SIGN_RU[g.si]+'</td><td class="num">'+g.rel+'</td><td>'+g.note+'</td></tr>';
+  }
+  h+='</tbody></table>';
+  return h;
+}
+
+/* ── НЕДЕЛЯ ── */
+function renderWeek(chart,tl,start,end,moonSign,moonNak,lagSign,ashta){
+  const dh=dashaHeadline(tl,start,4);
+  // оценка по дням
+  const days=[]; let score=dashaTone(dh.d.antar)+dashaTone(dh.d.prat);
+  for(let i=0;i<7;i++){
+    const ms=start+i*MS_DAY;
+    const mN=bodySid(ms,'Moon'); const mNak=Math.floor(nd(mN)/(360/27)), mSign=signIdx(mN);
+    const tara=taraBala(moonNak,mNak); const ch=chandraBala(moonSign,mSign);
+    let ds=(tara.t==='good'?1:tara.t==='bad'?-1:0)+(ch.t==='good'?1:ch.t==='bad'?-1:0);
+    days.push({ms,mSign,mNak,tara,ch,ds}); score+=ds/7;
+  }
+  const best=[...days].sort((a,b)=>b.ds-a.ds)[0], worst=[...days].sort((a,b)=>a.ds-b.ds)[0];
+
+  let h='<div class="verdict-card"><div class="verdict-label">Прогноз на неделю · '+fmtDM(start)+' – '+fmtD(end-MS_DAY)+'</div>'+
+    '<div class="verdict-title">'+verdict(score)+'</div>'+
+    '<div class="verdict-sub">'+esc([dh.d.maha,dh.d.antar,dh.d.prat].map(x=>DASHA_RU[x]).join(' → '))+'</div></div>';
+
+  h+='<div class="block-title">Вимшоттари-даша</div>';
+  h+='<div class="card"><p>'+esc(dh.str)+'</p><p class="why">'+dashaLordDesc(chart,dh.d.antar)+'</p></div>';
+  h+=dashaChangeList(tl,start,end,3);
+
+  h+='<div class="block-title">Дни недели</div>';
+  h+='<p class="block-lead">Оценка по тара-бала и чандра-бала (положение транзитной Луны от натальной).</p>';
+  h+='<table class="rtable"><thead><tr><th>Дата</th><th>Луна</th><th>Тара</th><th>Чандра-бала</th></tr></thead><tbody>';
+  for(const d of days){
+    const cls=d.ds>0?'good':d.ds<0?'bad':'';
+    h+='<tr class="'+cls+'"><td>'+WEEKDAYS[moment.tz(d.ms,FZONE).day()].slice(0,2)+' '+fmtDShort(d.ms)+'</td>'+
+      '<td>'+SIGN_RU[d.mSign]+'</td><td>'+tagFor(d.tara.t)+' '+d.tara.n.split(' ')[0]+'</td>'+
+      '<td>'+tagFor(d.ch.t)+' '+d.ch.rel+'-й</td></tr>';
+  }
+  h+='</tbody></table>';
+  const dayReason=d=>('тара '+d.tara.n.split(' ')[0]+' ('+(d.tara.t==='good'?'благоприятно':d.tara.t==='bad'?'напряжённо':'нейтрально')+
+    '), чандра-бала '+d.ch.rel+'-й ('+(d.ch.t==='good'?'сильная':d.ch.t==='bad'?'слабая':'средняя')+').');
+  h+='<p class="why"><b>Лучший день недели:</b> '+fmtD(best.ms)+' — '+dayReason(best)+'</p>';
+  h+='<p class="why"><b>Самый напряжённый:</b> '+fmtD(worst.ms)+' — '+dayReason(worst)+'</p>';
+
+  h+='<div class="block-title">Транзиты над натальной Луной</div>';
+  h+=fastTransitTable(chart,start,moonSign,['Sun','Mercury','Venus','Mars']);
+  return h;
+}
+
+/* ── МЕСЯЦ ── */
+function renderMonth(chart,tl,start,end,moonSign,moonNak,lagSign,ashta){
+  const dh=dashaHeadline(tl,start,4);
+  // средний фон месяца по тара (выборка через день)
+  let score=dashaTone(dh.d.antar)+dashaTone(dh.d.prat), n=0, sum=0; const peaks=[];
+  for(let ms=start; ms<end; ms+=MS_DAY){
+    const mN=bodySid(ms,'Moon'), mNak=Math.floor(nd(mN)/(360/27)), mSign=signIdx(mN);
+    const tara=taraBala(moonNak,mNak), ch=chandraBala(moonSign,mSign);
+    const ds=(tara.t==='good'?1:tara.t==='bad'?-1:0)+(ch.t==='good'?1:ch.t==='bad'?-1:0);
+    sum+=ds; n++; peaks.push({ms,ds,tara,ch});
+  }
+  score+=sum/Math.max(1,n);
+  const good=peaks.filter(p=>p.ds>=2).slice(0,6);
+  const bad=peaks.filter(p=>p.ds<=-2).slice(0,6);
+
+  let h='<div class="verdict-card"><div class="verdict-label">Прогноз на месяц · '+fmtDM(start)+' – '+fmtD(end-MS_DAY)+'</div>'+
+    '<div class="verdict-title">'+verdict(score)+'</div>'+
+    '<div class="verdict-sub">'+esc([dh.d.maha,dh.d.antar,dh.d.prat].map(x=>DASHA_RU[x]).join(' → '))+'</div></div>';
+
+  h+='<div class="block-title">Вимшоттари-даша</div>';
+  h+='<div class="card"><p>'+esc(dh.str)+'</p><p class="why">'+dashaLordDesc(chart,dh.d.antar)+'</p>'+
+    '<p class="why">Пратьянтара: '+dashaLordDesc(chart,dh.d.prat)+'</p></div>';
+  h+=dashaChangeList(tl,start,end,3);
+
+  // Солнце в месяце (санкранти)
+  h+='<div class="block-title">Солнце и медленные планеты</div>';
+  h+=fastTransitTable(chart,start,moonSign,['Sun','Mercury','Venus','Mars','Jupiter','Saturn']);
+  const sunCh=signChanges('Sun',start,end,MS_DAY);
+  if(sunCh.length){ h+='<p class="why"><b>Санкранти:</b> '+sunCh.map(c=>'Солнце входит в '+SIGN_RU[c.to]+' ('+fmtD(c.ms)+')').join('; ')+'.</p>'; }
+
+  // Дни силы/уязвимости
+  if(good.length||bad.length){
+    h+='<div class="block-title">Дни месяца</div>';
+    if(good.length) h+='<p class="why"><b>Благоприятные:</b> '+good.map(p=>fmtDShort(p.ms)).join(', ')+'.</p>';
+    if(bad.length) h+='<p class="why"><b>Осторожные:</b> '+bad.map(p=>fmtDShort(p.ms)).join(', ')+'.</p>';
+  }
+
+  // Аштакаварга по знакам медленных планет
+  h+=ashtaBlock(chart,start,ashta,['Jupiter','Saturn']);
+  return h;
+}
+
+/* ── ГОД ── */
+function renderYear(chart,tl,start,end,moonSign,moonNak,lagSign,ashta){
+  const dh=dashaHeadline(tl,start,3);
+  let score=dashaTone(dh.d.maha)+dashaTone(dh.d.antar);
+
+  // Саде-сати
+  const ss=sadeSatiWindow(moonSign,start);
+  const shani=shaniStatus(moonSign,start);
+  if(shani.active) score-=1; if(shani.small) score-=0.5;
+
+  // Юпитер гочара
+  const jup=gocharaRow('Jupiter',start,moonSign); score+=jup.good?1:-0.5;
+
+  let h='<div class="verdict-card"><div class="verdict-label">Прогноз на год · '+fmtD(start)+' – '+fmtD(end-MS_DAY)+'</div>'+
+    '<div class="verdict-title">'+verdict(score)+'</div>'+
+    '<div class="verdict-sub">'+esc([dh.d.maha,dh.d.antar].map(x=>DASHA_RU[x]).join(' → '))+'</div></div>';
+
+  h+='<div class="block-title">Вимшоттари-даша года</div>';
+  h+='<div class="card"><p class="why">'+dashaLordDesc(chart,dh.d.maha)+'</p></div>';
+  h+=dashaChangeList(tl,start,end,2);
+  h+=dashaChangeList(tl,start,end,3,'Пратьянтара-периоды');
+
+  // Сатурн / Саде-сати
+  h+='<div class="block-title">Сатурн и Саде-сати</div>';
+  h+=saturnBlock(chart,tl,start,end,moonSign,ashta,ss,shani);
+
+  // Юпитер
+  h+='<div class="block-title">Юпитер (гуру-гочара)</div>';
+  h+=jupiterBlock(chart,start,end,moonSign,ashta);
+
+  // Раху/Кету
+  h+='<div class="block-title">Раху и Кету</div>';
+  h+=nodesBlock(start,end,moonSign,lagSign);
+  return h;
+}
+
+/* ── 5 ЛЕТ ── */
+function renderFive(chart,tl,start,end,moonSign,moonNak,lagSign,ashta){
+  const dh=dashaHeadline(tl,start,2);
+  let h='<div class="verdict-card"><div class="verdict-label">Прогноз на 5 лет · '+fmtD(start)+' – '+fmtD(end-MS_DAY)+'</div>'+
+    '<div class="verdict-title">Долгосрочные тенденции</div>'+
+    '<div class="verdict-sub">Махадаша: '+esc(DASHA_RU[dh.d.maha])+(dh.d.antar?' · антардаша '+esc(DASHA_RU[dh.d.antar]):'')+'</div></div>';
+
+  h+='<div class="block-title">Смены периодов Вимшоттари</div>';
+  h+='<p class="block-lead">Ключевые переключения махадаши и антардаши на пять лет — общий сценарий.</p>';
+  h+=dashaChangeList(tl,start,end,2,'Махадаша / антардаша');
+
+  // Сатурн путь + Саде-сати окна
+  h+='<div class="block-title">Сатурн: путь и Саде-сати</div>';
+  const satCh=signChanges('Saturn',start,end,3*MS_DAY);
+  let sh='<div class="card"><p>Сейчас Сатурн в знаке <b>'+SIGN_RU[signAtKey('Saturn',start)]+'</b> ('+relHouse(moonSign,signAtKey('Saturn',start))+'-й от Луны).</p>';
+  if(satCh.length) sh+='<p class="why"><b>Смены знака:</b> '+satCh.map(c=>SIGN_RU[c.to]+' — '+fmtD(c.ms)).join('; ')+'.</p>';
+  const ss=sadeSatiWindow(moonSign,start);
+  if(ss.current) sh+='<p class="why">'+tagFor('bad')+' Саде-сати идёт: примерно с '+fmtD(ss.current.start)+' по '+fmtD(ss.current.end)+'.</p>';
+  else if(ss.next && ss.next.start<end) sh+='<p class="why">'+tagFor('bad')+' Саде-сати начнётся около '+fmtD(ss.next.start)+' (до '+fmtD(ss.next.end)+').</p>';
+  else sh+='<p class="why">'+tagFor('good')+' Саде-сати в этот период не начинается.</p>';
+  sh+='</div>'; h+=sh;
+
+  // Юпитер путь
+  h+='<div class="block-title">Юпитер: путь по знакам</div>';
+  const jupCh=signChanges('Jupiter',start,end,3*MS_DAY);
+  let jh='<div class="card"><p>Сейчас Юпитер в знаке <b>'+SIGN_RU[signAtKey('Jupiter',start)]+'</b> ('+relHouse(moonSign,signAtKey('Jupiter',start))+'-й от Луны).</p>';
+  if(jupCh.length) jh+='<p class="why"><b>Смены знака:</b> '+jupCh.map(c=>SIGN_RU[c.to]+' — '+fmtD(c.ms)).join('; ')+'.</p>';
+  jh+='</div>'; h+=jh;
+
+  // Раху/Кету путь
+  h+='<div class="block-title">Раху и Кету: путь по знакам</div>';
+  const rahuCh=signChanges('Rahu',start,end,3*MS_DAY);
+  let rh='<div class="card"><p>Сейчас Раху в <b>'+SIGN_RU[signAtKey('Rahu',start)]+'</b>, Кету в <b>'+SIGN_RU[signAtKey('Ketu',start)]+'</b>.</p>';
+  if(rahuCh.length) rh+='<p class="why"><b>Смены оси:</b> '+rahuCh.map(c=>'Раху → '+SIGN_RU[c.to]+' ('+fmtD(c.ms)+')').join('; ')+'.</p>';
+  rh+='</div>'; h+=rh;
+
+  // Годовой обзор
+  h+='<div class="block-title">По годам</div>';
+  h+='<ul class="seg-list">';
+  for(let i=0;i<5;i++){
+    const y0=moment.tz(start,FZONE).add(i,'year').valueOf();
+    const d=dashaLevels(tl,y0);
+    const shy=shaniStatus(moonSign,y0);
+    const jupy=gocharaRow('Jupiter',y0,moonSign);
+    let line='<span class="seg-when">'+moment.tz(y0,FZONE).year()+'</span>: даша '+DASHA_RU[d.maha]+' → '+DASHA_RU[d.antar]+'. ';
+    line+='Юпитер в '+SIGN_RU[jupy.si]+' ('+jupy.rel+'-й от Луны, '+(jupy.good?'благоприятно':'нейтрально-слабо')+'). ';
+    if(shy.active) line+='Саде-сати ('+shy.phase+'). ';
+    else if(shy.small) line+=shy.small+'. ';
+    h+='<li>'+line+'</li>';
+  }
+  h+='</ul>';
+  return h;
+}
+
+/* ── ВСПОМОГАТЕЛЬНЫЕ РЕНДЕРЫ ── */
+function dashaChangeList(tl,start,end,level,title){
+  const segs=dashaSegments(tl,start,end,level);
+  if(segs.length<=1 && level>1){
+    return ''; // одна и та же — не засоряем
+  }
+  const lbl=title||(level===2?'Смены антардаши':level===3?'Смены пратьянтары':'Смены периодов');
+  let h='<div class="card"><p class="sub">'+lbl+'</p><ul class="seg-list">';
+  for(const s of segs){
+    const from=Math.max(s.msStart,start), to=Math.min(s.msEnd,end);
+    h+='<li><span class="seg-when">'+fmtDShort(from)+' – '+fmtDShort(to)+'</span> · <span class="seg-head">'+
+      s.path.map(x=>DASHA_RU[x]).join(' → ')+'</span></li>';
+  }
+  h+='</ul></div>';
+  return h;
+}
+function fastTransitTable(chart,ms,moonSign,keys){
+  let h='<table class="rtable"><thead><tr><th>Планета</th><th>Знак</th><th>Дом от Луны</th><th>Влияние</th></tr></thead><tbody>';
+  for(const key of keys){
+    const g=gocharaRow(key,ms,moonSign);
+    h+='<tr class="'+(g.good?'good':'bad')+'"><td><b>'+DASHA_RU[key]+'</b>'+(g.retro?' <span class="tag r">R</span>':'')+'</td>'+
+      '<td>'+SIGN_RU[g.si]+'</td><td class="num">'+g.rel+'</td><td>'+g.note+'</td></tr>';
+  }
+  h+='</tbody></table>';
+  return h;
+}
+function binduBar(v,max){ const w=Math.round(v/max*90); return '<span class="bindu-bar" style="width:'+Math.max(2,w)+'px"></span>'; }
+function ashtaBlock(chart,ms,ashta,keys){
+  let h='<div class="block-title">Аштакаварга (сила транзита)</div>';
+  h+='<p class="block-lead">Число бинду в знаке, где идёт планета: 5–8 — сильно и благоприятно, 3–4 — средне, 0–2 — слабо. Сарва (общая) выше 28 — благоприятный знак.</p>';
+  h+='<table class="rtable"><thead><tr><th>Планета</th><th>Знак транзита</th><th>Свои бинду</th><th>Сарва</th></tr></thead><tbody>';
+  for(const key of keys){
+    const si=signAtKey(key,ms); const bav=ashta.bav[key]?ashta.bav[key][si]:'—'; const sav=ashta.sav[si];
+    const cls=(ashta.bav[key]&&ashta.bav[key][si]>=5)?'good':(ashta.bav[key]&&ashta.bav[key][si]<=2)?'bad':'';
+    h+='<tr class="'+cls+'"><td><b>'+DASHA_RU[key]+'</b></td><td>'+SIGN_RU[si]+'</td>'+
+      '<td class="num">'+bav+' '+(ashta.bav[key]?binduBar(bav,8):'')+'</td>'+
+      '<td class="num">'+sav+' '+binduBar(sav,45)+'</td></tr>';
+  }
+  h+='</tbody></table>';
+  return h;
+}
+function saturnBlock(chart,tl,start,end,moonSign,ashta,ss,shani){
+  const si=signAtKey('Saturn',start), rel=shani.rel;
+  const retro=isRetro(start,'Saturn');
+  const bav=ashta.bav.Saturn[si], sav=ashta.sav[si];
+  let h='<div class="card"><h4>Сатурн в '+SIGN_RU[si]+(retro?' (R)':'')+' · '+rel+'-й дом от Луны</h4>';
+  if(shani.active){ h+='<p>'+tagFor('bad')+' <b>Саде-сати</b>, фаза: '+shani.phase+'. Это время испытаний, ответственности и созревания — Сатурн требует дисциплины и терпения; воздаётся за упорный честный труд.</p>'; }
+  else if(shani.small){ h+='<p>'+tagFor('bad')+' <b>'+shani.small+'</b> (малая панчоти, ~2,5 года) — повышенная нагрузка и ограничения.</p>'; }
+  else { const g=GOCHARA_GOOD.Saturn.includes(rel); h+='<p>'+tagFor(g?'good':'bad')+' Транзит по '+rel+'-му от Луны — '+(g?GOCHARA_NOTE.Saturn.g:GOCHARA_NOTE.Saturn.b)+'</p>'; }
+  // окна Саде-сати
+  if(ss.current) h+='<p class="why"><b>Текущее окно Саде-сати:</b> примерно с '+fmtD(ss.current.start)+' по '+fmtD(ss.current.end)+'.</p>';
+  else if(ss.next) h+='<p class="why"><b>Следующее Саде-сати:</b> около '+fmtD(ss.next.start)+' – '+fmtD(ss.next.end)+'.</p>';
+  // смены знака в году
+  const satCh=signChanges('Saturn',start,end,2*MS_DAY);
+  if(satCh.length) h+='<p class="why"><b>Смена знака в периоде:</b> '+satCh.map(c=>SIGN_RU[c.to]+' ('+fmtD(c.ms)+')').join('; ')+'.</p>';
+  h+='<p class="why">Аштакаварга Сатурна в этом знаке: <b>'+bav+'</b>/8 бинду; Сарва — <b>'+sav+'</b>. '+
+    (bav>=5?'Высокая опора: испытания ведут к результату.':bav<=2?'Слабая опора: даётся тяжелее, берегите силы.':'Средняя опора.')+'</p>';
+  h+='</div>';
+  return h;
+}
+function jupiterBlock(chart,start,end,moonSign,ashta){
+  const g=gocharaRow('Jupiter',start,moonSign);
+  const bav=ashta.bav.Jupiter[g.si], sav=ashta.sav[g.si];
+  let h='<div class="card"><h4>Юпитер в '+SIGN_RU[g.si]+(g.retro?' (R)':'')+' · '+g.rel+'-й дом от Луны</h4>';
+  h+='<p>'+tagFor(g.good?'good':'bad')+' '+g.note+'</p>';
+  const jupCh=signChanges('Jupiter',start,end,2*MS_DAY);
+  if(jupCh.length) h+='<p class="why"><b>Смена знака:</b> '+jupCh.map(c=>SIGN_RU[c.to]+' ('+fmtD(c.ms)+')').join('; ')+'.</p>';
+  h+='<p class="why">Аштакаварга Юпитера: <b>'+bav+'</b>/8 бинду; Сарва — <b>'+sav+'</b>. '+
+    (bav>=5?'Сильная поддержка роста и удачи.':bav<=2?'Поддержка ослаблена — не полагайтесь только на удачу.':'Умеренная поддержка.')+'</p>';
+  h+='</div>';
+  return h;
+}
+function nodesBlock(start,end,moonSign,lagSign){
+  const rSi=signAtKey('Rahu',start), kSi=signAtKey('Ketu',start);
+  const rRel=relHouse(moonSign,rSi), kRel=relHouse(moonSign,kSi);
+  const rG=GOCHARA_GOOD.Rahu.includes(rRel);
+  let h='<div class="card"><h4>Раху в '+SIGN_RU[rSi]+' ('+rRel+'-й от Луны) · Кету в '+SIGN_RU[kSi]+' ('+kRel+'-й)</h4>';
+  h+='<p>'+tagFor(rG?'good':'bad')+' Раху: '+(rG?GOCHARA_NOTE.Rahu.g:GOCHARA_NOTE.Rahu.b)+'</p>';
+  h+='<p class="why">Кету: '+(GOCHARA_GOOD.Ketu.includes(kRel)?GOCHARA_NOTE.Ketu.g:GOCHARA_NOTE.Ketu.b)+'</p>';
+  const rahuCh=signChanges('Rahu',start,end,3*MS_DAY);
+  if(rahuCh.length) h+='<p class="why"><b>Смена оси:</b> '+rahuCh.map(c=>'Раху → '+SIGN_RU[c.to]+' ('+fmtD(c.ms)+')').join('; ')+'.</p>';
+  h+='</div>';
+  return h;
+}
+function footerNote(){
+  return '<p class="calc-details">Расчёт: сидерический зодиак, аянамша Лахири (Читрапакша), '+
+    (SWE_READY?'швейцарские эфемериды (Moshier)':'приближённый аналитический расчёт')+
+    '. Дома — Whole Sign от Лагны. Гочара оценивается от натальной Луны; сила транзита — по аштакаварге. '+
+    'Даты Саде-сати и смен знаков приблизительны (учитывается ретроградность). Пояс расчёта: '+esc(FZONE)+'.</p>';
+}
+
+/* ── старт ── */
+document.getElementById('year').textContent=new Date().getFullYear();
+(function initDates(){
+  const t=new Date();
+  document.getElementById('tdate').value=t.toISOString().slice(0,10);
+})();
+ensureEngine();
+loadCities();
+</script>
+</body>
+</html>

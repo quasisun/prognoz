@@ -96,6 +96,25 @@
     .rtable{font-size:.82rem}
     .rtable th,.rtable td{padding:6px 6px}
   }
+
+  /* ── печать / сохранение в PDF ── */
+  .print-only{display:none}
+  @media print{
+    .no-print,#inputForm,.astro-header,#engineBadge,.astro-footer{display:none !important}
+    .print-only{display:block}
+    .astro-app{--app-top-offset:0;padding-top:0;max-width:100%}
+    body{background:#fff}
+    .astro-card{border:none;box-shadow:none;padding:0;margin:0}
+    /* сохранить фирменные цвета карточек и тегов в PDF */
+    .verdict-card,.tag,.bindu-bar,.rtable tr.good td,.rtable tr.bad td,.card.summary{
+      -webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .card,.verdict-card,.rtable tr,details.natal{page-break-inside:avoid}
+    .block-title{page-break-after:avoid}
+    .print-head{margin:0 0 14px;border-bottom:2px solid var(--c-orange);padding-bottom:10px}
+    .ph-title{font-family:var(--font-display);font-size:1.9rem;color:var(--c-red);line-height:1.1}
+    .ph-sub{font-size:.85rem;color:var(--c-ink-soft);margin:2px 0 8px}
+    .ph-line{font-size:.92rem;margin:2px 0}
+  }
 </style>
 </head>
 
@@ -111,6 +130,7 @@
 
   <section class="astro-section">
     <div class="astro-card">
+     <div id="inputForm">
 
       <!-- Данные рождения -->
       <div class="field-row">
@@ -190,6 +210,7 @@
       <button class="astro-btn astro-btn--block" id="calcBtn" style="margin-top:18px">
         Рассчитать прогноз
       </button>
+     </div><!-- /inputForm -->
 
       <div id="result" aria-live="polite"></div>
     </div>
@@ -993,7 +1014,9 @@ async function runForecast(){
     if(deedText){ deed=detectDeed(deedText); if(!deed && (!deedSel||deedSel==='')) deedUnrecognized=true; }
     if(!deed && deedSel) deed=DEEDS.find(x=>x.id===deedSel)||null;
 
+    const placeStr=selected?(selected.name+(selected.admin?', '+selected.admin:'')):('координаты '+lat.toFixed(2)+', '+lon.toFixed(2));
     let html='';
+    html+=printHeadHtml(bdate,btime,placeStr,zone,start,end);
     html+=natalBlock(chart,natalMoonSign,natalMoonNak,lagSign);
     if(PERIOD==='day') html+=renderDay(chart,tl,anchor,start,end,natalMoonSign,natalMoonNak,ashta,ps);
     else if(PERIOD==='week') html+=renderWeek(chart,tl,start,end,natalMoonSign,natalMoonNak,ashta,ps);
@@ -1005,6 +1028,7 @@ async function runForecast(){
     if(deed) html+=deedBlock(chart,tl,deed,start,end,anchor,natalMoonSign,natalMoonNak,ashta,PERIOD);
     else if(deedUnrecognized) html+=deedNotRecognized();
     html+=footerNote();
+    html+=printBtnHtml();
     res.innerHTML=html;
     setTimeout(()=>{ try{ res.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} },60);
   }catch(err){
@@ -1706,6 +1730,22 @@ function deedNotRecognized(){
     'Не удалось распознать дело по описанию. Выберите тему из списка «Задуманное дело» — и расчёт по мухурте появится здесь.</p></div>';
 }
 
+/* ── печатная шапка (видна только при печати/сохранении в PDF) ── */
+const PERIOD_PRINT={day:'день',week:'неделя',month:'месяц',year:'год',five:'5 лет'};
+function printHeadHtml(bdate,btime,placeStr,zone,start,end){
+  const [y,m,d]=bdate.split('-');
+  return '<div class="print-only print-head">'+
+    '<div class="ph-title">Джйотиш-прогноз</div>'+
+    '<div class="ph-sub">Индийская астрология со Светланой Кройцер · goroskop1008.ru · аянамша Лахири, Whole Sign</div>'+
+    '<div class="ph-line">Рождение: <b>'+d+'.'+m+'.'+y+', '+esc(btime)+'</b> · '+esc(placeStr)+' · пояс '+esc(zone)+'</div>'+
+    '<div class="ph-line">Период: <b>'+PERIOD_PRINT[PERIOD]+'</b> · '+fmtD(start)+' – '+fmtD(addDaysMs(end,-1))+
+    ' · составлено '+fmtDShort(Date.now())+'</div></div>';
+}
+function printBtnHtml(){
+  return '<button type="button" id="printBtn" class="astro-btn astro-btn--block no-print" style="margin-top:16px">Скачать PDF / распечатать</button>'+
+    '<p class="note no-print" style="text-align:center;margin-top:6px">Откроется окно печати: выберите принтер — или «Сохранить как PDF», чтобы скачать файл.</p>';
+}
+
 function footerNote(){
   return '<p class="calc-details">Расчёт: сидерический зодиак, аянамша Лахири (Читрапакша), '+
     (SWE_READY?'швейцарские эфемериды (Moshier)':'приближённый аналитический расчёт')+
@@ -1713,6 +1753,21 @@ function footerNote(){
     'Панчанга и вара берутся на выбранное время (по умолчанию 12:00), без привязки к восходу. '+
     'Даты Саде-сати и смен знаков приблизительны (учитывается ретроградность). Пояс расчёта: '+esc(FZONE)+'.</p>';
 }
+
+/* ── печать / сохранение в PDF ── */
+document.getElementById('result').addEventListener('click',e=>{
+  if(e.target.closest('#printBtn')) window.print();
+});
+// на время печати раскрываем карту рождения, затем возвращаем как было
+let natalWasOpen=null;
+window.addEventListener('beforeprint',()=>{
+  const n=document.querySelector('details.natal');
+  if(n){ natalWasOpen=n.open; n.open=true; }
+});
+window.addEventListener('afterprint',()=>{
+  const n=document.querySelector('details.natal');
+  if(n && natalWasOpen!==null){ n.open=natalWasOpen; natalWasOpen=null; }
+});
 
 /* ── Enter в полях = расчёт (кроме поля места: там Enter выбирает город) ── */
 ['bdate','btime','tdate','ttime','deedText','latManual','lonManual'].forEach(id=>{

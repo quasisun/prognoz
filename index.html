@@ -983,6 +983,7 @@ async function runForecast(){
     const lagSign=signIdx(chart.pos.Lagna);
     const ashta=computeAshtakavarga(chart.pos);
     const ssWin=sadeSatiWindow(natalMoonSign,anchor);
+    TENSE=periodTense(start,end); // будущее / текущее / прошедшее — влияет на повествование
     const ps=periodScore(chart,tl,anchor,start,end,natalMoonSign,natalMoonNak,ashta,PERIOD,ssWin);
 
     // задуманное дело: текст → ключевые слова; иначе список
@@ -1000,6 +1001,7 @@ async function runForecast(){
     else if(PERIOD==='year') html+=renderYear(chart,tl,start,end,natalMoonSign,natalMoonNak,ashta,ps,ssWin);
     else html+=renderFive(chart,tl,start,end,natalMoonSign,natalMoonNak,ashta,ps,ssWin);
     html+=periodSummary(chart,ps,PERIOD);
+    html+=spheresBlock(chart,tl,anchor,start,end,natalMoonSign,ashta,PERIOD);
     if(deed) html+=deedBlock(chart,tl,deed,start,end,anchor,natalMoonSign,natalMoonNak,ashta,PERIOD);
     else if(deedUnrecognized) html+=deedNotRecognized();
     html+=footerNote();
@@ -1067,7 +1069,7 @@ function renderDay(chart,tl,anchor,start,end,moonSign,moonNak,ashta,ps){
   const tara=taraBala(moonNak,moonNakNow);
   const ch=chandraBala(moonSign,moonSignNow);
 
-  let h='<div class="verdict-card"><div class="verdict-label">Прогноз на день · '+fmtD(anchor)+'</div>'+
+  let h='<div class="verdict-card"><div class="verdict-label">'+byTense(['Прогноз на день','Разбор прошедшего дня'])+' · '+fmtD(anchor)+'</div>'+
     '<div class="verdict-title">'+verdict(ps.score)+'</div>'+
     '<div class="verdict-sub">'+esc(dh.str)+'</div></div>';
 
@@ -1122,7 +1124,7 @@ function renderWeek(chart,tl,start,end,moonSign,moonNak,ashta,ps){
   }
   const best=[...days].sort((a,b)=>b.ds-a.ds)[0], worst=[...days].sort((a,b)=>a.ds-b.ds)[0];
 
-  let h='<div class="verdict-card"><div class="verdict-label">Прогноз на неделю · '+fmtDM(start)+' – '+fmtD(addDaysMs(end,-1))+'</div>'+
+  let h='<div class="verdict-card"><div class="verdict-label">'+byTense(['Прогноз на неделю','Разбор прошедшей недели'])+' · '+fmtDM(start)+' – '+fmtD(addDaysMs(end,-1))+'</div>'+
     '<div class="verdict-title">'+verdict(ps.score)+'</div>'+
     '<div class="verdict-sub">'+esc([dh.d.maha,dh.d.antar,dh.d.prat].map(x=>DASHA_RU[x]).join(' → '))+'</div></div>';
 
@@ -1164,7 +1166,7 @@ function renderMonth(chart,tl,start,end,moonSign,moonNak,ashta,ps){
   const good=peaks.filter(p=>p.ds>=2).slice(0,6);
   const bad=peaks.filter(p=>p.ds<=-2).slice(0,6);
 
-  let h='<div class="verdict-card"><div class="verdict-label">Прогноз на месяц · '+fmtDM(start)+' – '+fmtD(addDaysMs(end,-1))+'</div>'+
+  let h='<div class="verdict-card"><div class="verdict-label">'+byTense(['Прогноз на месяц','Разбор прошедшего месяца'])+' · '+fmtDM(start)+' – '+fmtD(addDaysMs(end,-1))+'</div>'+
     '<div class="verdict-title">'+verdict(ps.score)+'</div>'+
     '<div class="verdict-sub">'+esc([dh.d.maha,dh.d.antar,dh.d.prat].map(x=>DASHA_RU[x]).join(' → '))+'</div></div>';
 
@@ -1210,7 +1212,7 @@ function renderYear(chart,tl,start,end,moonSign,moonNak,ashta,ps,ssWin){
   const ss=ssWin;
   const shani=shaniStatus(moonSign,start);
 
-  let h='<div class="verdict-card"><div class="verdict-label">Прогноз на год · '+fmtD(start)+' – '+fmtD(addDaysMs(end,-1))+'</div>'+
+  let h='<div class="verdict-card"><div class="verdict-label">'+byTense(['Прогноз на год','Разбор прошедшего года'])+' · '+fmtD(start)+' – '+fmtD(addDaysMs(end,-1))+'</div>'+
     '<div class="verdict-title">'+verdict(ps.score)+'</div>'+
     '<div class="verdict-sub">'+esc([dh.d.maha,dh.d.antar].map(x=>DASHA_RU[x]).join(' → '))+'</div></div>';
 
@@ -1236,7 +1238,7 @@ function renderYear(chart,tl,start,end,moonSign,moonNak,ashta,ps,ssWin){
 /* ── 5 ЛЕТ ── */
 function renderFive(chart,tl,start,end,moonSign,moonNak,ashta,ps,ssWin){
   const dh=dashaHeadline(tl,start,2);
-  let h='<div class="verdict-card"><div class="verdict-label">Прогноз на 5 лет · '+fmtD(start)+' – '+fmtD(addDaysMs(end,-1))+'</div>'+
+  let h='<div class="verdict-card"><div class="verdict-label">'+byTense(['Прогноз на 5 лет','Разбор прошедших 5 лет'])+' · '+fmtD(start)+' – '+fmtD(addDaysMs(end,-1))+'</div>'+
     '<div class="verdict-title">Долгосрочные тенденции</div>'+
     '<div class="verdict-sub">Махадаша: '+esc(DASHA_RU[dh.d.maha])+(dh.d.antar?' · антардаша '+esc(DASHA_RU[dh.d.antar]):'')+'</div></div>';
 
@@ -1373,6 +1375,170 @@ function nodesBlock(start,end,moonSign){
   h+='</div>';
   return h;
 }
+/* ── ВРЕМЯ ПОВЕСТВОВАНИЯ: будущее / текущее / прошедшее ── */
+let TENSE='pres'; // выставляется в runForecast; используется сводкой, сферами и блоком дела
+function periodTense(start,end){
+  const now=Date.now();
+  if(end<=now) return 'past';
+  if(start>now) return 'fut';
+  return 'pres';
+}
+const TIDX={fut:0,pres:1,past:2};
+const PERIOD_TNAME={ // винительный падеж: «посмотреть на …»
+  day:['предстоящий день','сегодняшний день','прошедший день'],
+  week:['предстоящую неделю','текущую неделю','прошедшую неделю'],
+  month:['предстоящий месяц','текущий месяц','прошедший месяц'],
+  year:['предстоящий год','текущий год','прошедший год'],
+  five:['предстоящие пять лет','эти пять лет','прошедшие пять лет']
+};
+// выбор текста: [будущее/настоящее, прошедшее]
+function byTense(pair){ return TENSE==='past'?pair[1]:pair[0]; }
+
+/* ── СФЕРЫ ЖИЗНИ: активация дашей + транзиты → предсказания ──
+   Тексты парами [будущее/настоящее, прошедшее]; b — событийные (месяц/год/5 лет),
+   s — тактические (день/неделя). {DIR} в travel заменяется на сторону света планеты. */
+const DIRECTIONS={Sun:'восток',Venus:'юго-восток',Mars:'юг',Rahu:'юго-запад',Saturn:'запад',
+  Moon:'северо-запад',Mercury:'север',Jupiter:'северо-восток',Ketu:'юго-запад'};
+const SPHERES=[
+ {id:'love',name:'Любовь и отношения',houses:[5,7],karakas:['Venus'],tx:{
+  pb:['Судьба готовит вам важную встречу: в вашу жизнь может войти человек, который научит вас любить. Уже существующий союз ждёт потепление и сближение — впускайте это тепло.',
+      'Этот период принёс важную встречу или заметное потепление в отношениях. То, что завязалось тогда, имеет глубокие корни.'],
+  ps:['Сердечные дела сложатся легко: хорошее время для свиданий, признаний и примирений.',
+      'Для сердечных дел время было удачным — свидания, признания и примирения складывались легко.'],
+  nb:['Отношения будут проходить проверку на прочность: возможны охлаждения и недосказанность. Не рубите сгоряча — этот период учит зрелой любви.',
+      'Отношения проходили проверку на прочность. Если было непросто — это был урок зрелой любви, а не приговор союзу.'],
+  ns:['В личном будьте бережны: слова могут ранить сильнее обычного. Выяснения отношений лучше отложить.',
+      'В личном время было колючим — если случались размолвки, не вините себя: фон был напряжённым.']}},
+ {id:'money',name:'Деньги и доходы',houses:[2,11],karakas:['Jupiter','Venus'],tx:{
+  pb:['Финансовая река станет полноводнее: вероятны рост доходов, выгодные предложения, прибавления. Смело называйте свою цену и не отказывайтесь от новых источников.',
+      'Финансово период был поддерживающим: приходили возможности и поступления. Что удалось накопить тогда — хорошая опора.'],
+  ps:['Удачное время для денежных решений: покупок, переговоров о цене, просьб о повышении.',
+      'Время было удачным для денежных решений — покупок и переговоров о цене.'],
+  nb:['Деньги будут требовать дисциплины: возможны лишние траты и задержки поступлений. Держите подушку и не влезайте в крупные долги — период учит бережности.',
+      'Деньги требовали дисциплины: траты утекали, поступления задерживались. Это был урок бережности, а не бедности.'],
+  ns:['Крупные траты и рискованные вложения лучше отложить — деньги могут утекать сквозь пальцы.',
+      'Для крупных трат время было неудачным — если что-то утекло сквозь пальцы, не корите себя.']}},
+ {id:'career',name:'Карьера и статус',houses:[10,6],karakas:['Sun','Saturn','Mercury'],tx:{
+  pb:['Вас будут замечать: вероятны признание, повышение или новая ответственность. Берите проекты, о которых давно думали, — обстоятельства на вашей стороне.',
+      'В делах и карьере период дал заметный шаг: признание, новую ответственность или важный проект. Этот задел ещё послужит.'],
+  ps:['Рабочие дела спорятся: хорошее время для важных задач, отчётов и разговоров с руководством.',
+      'Рабочие дела в это время спорились — задачи и разговоры с руководством складывались удачно.'],
+  nb:['На работе возможны давление и рост нагрузки: от вас будут требовать больше обычного. Делайте своё дело тщательно и не ввязывайтесь в интриги — упорство окупится позже.',
+      'На работе давило: нагрузка и требования были выше обычного. Ваше упорство в том периоде не пропало — оно окупается позже.'],
+  ns:['Не лучший момент для просьб и громких инициатив на работе — делайте текущее тщательно и без спешки.',
+      'Для карьерных инициатив время было тугим — если что-то буксовало, дело было в фоне, а не в вас.']}},
+ {id:'home',name:'Дом и недвижимость',houses:[4],karakas:['Mars','Saturn','Venus'],tx:{
+  pb:['Откроются возможности по жилью: покупка, переезд или заметное улучшение дома. Не пропустите своё окно — в этот период оно настоящее.',
+      'Период открывал возможности по жилью — покупку, переезд или улучшение дома. Если вы ими воспользовались, фундамент заложен верно.'],
+  ps:['Хорошее время для домашних дел: уюта, семейного очага, небольших улучшений в доме.',
+      'Время благоволило домашним делам — уюту и наведению порядка в гнезде.'],
+  nb:['Домашние и имущественные вопросы пойдут туго: возможны ремонты, поломки, бюрократия. Крупные сделки с жильём лучше не форсировать.',
+      'Домашние и имущественные вопросы шли туго — ремонты, поломки, бюрократия. Хорошо, если крупные сделки не форсировались.'],
+  ns:['Домашние дела могут капризничать: техника, быт, мелкие поломки. Отложите важные решения по жилью.',
+      'Быт капризничал — мелкие поломки и домашние хлопоты забирали силы.']}},
+ {id:'travel',name:'Путешествия и дальние горизонты',houses:[9,12,3],karakas:['Rahu','Moon'],tx:{
+  pb:['У вас проснётся тяга к дорогам и дальним горизонтам — и обстоятельства сложатся благоприятным образом для путешествия{DIR}. Дальние места принесут не только впечатления, но и удачу.',
+      'Период звал в дорогу — и дороги складывались. Поездки того времени принесли больше, чем впечатления.'],
+  ps:['Лёгкие на подъём дни: короткие поездки, вылазки и дорожные дела сложатся удачно.',
+      'Дни были лёгкими на подъём — поездки и дорожные дела складывались удачно.'],
+  nb:['Дороги будут даваться непросто: возможны переносы, задержки, бытовые сложности в пути. Закладывайте запас времени и подстраховывайте планы.',
+      'Дороги давались непросто: переносы и задержки испытывали терпение. Это было время учиться гибкости.'],
+  ns:['В дороге будьте внимательнее обычного и закладывайте запас времени — возможны задержки.',
+      'Дорожные дела шли с задержками — если поездка буксовала, фон был тому причиной.']}},
+ {id:'health',name:'Здоровье и силы',houses:[1,6],karakas:['Sun','Mars'],tx:{
+  pb:['Жизненных сил прибудет: отличное время укреплять тело, начинать оздоровление и практики — организм отзовётся быстро.',
+      'Период добавлял жизненных сил — начатое тогда оздоровление легло на благодатную почву.'],
+  ps:['Тело отзывчиво: хорошие дни для практик, движения и начала оздоровления.',
+      'Тело было отзывчивым — практики и движение шли впрок.'],
+  nb:['Берегите здоровье: организм будет уязвимее обычного, слабые места могут напомнить о себе. Сон, режим и умеренность — главные лекарства периода.',
+      'Организм был уязвимее обычного — если тело напоминало о себе, оно просило отдыха, а не подвигов.'],
+  ns:['Силы стоит поберечь: не перегружайтесь, высыпайтесь, отложите изнурительное.',
+      'Силы в эти дни утекали — перегрузки давались дорого.']}},
+ {id:'family',name:'Семья и дети',houses:[2,5],karakas:['Jupiter','Moon'],tx:{
+  pb:['Семья станет источником радости: возможны прибавление, успехи детей, тёплые семейные события — не пропустите их за делами.',
+      'Семья была источником радости периода: тёплые события того времени — из тех, что вспоминаются.'],
+  ps:['Тёплые дни для семьи и детей: совместные дела и разговоры сблизят.',
+      'Дни благоволили семье — совместные дела и разговоры сближали.'],
+  nb:['Близким понадобится больше вашего внимания и терпения. Мягкость сработает лучше строгости — особенно с детьми.',
+      'Близким требовалось больше внимания и терпения. Где хватило мягкости — там всё уладилось.'],
+  ns:['В семейных разговорах выбирайте мягкий тон — близкие чувствительнее обычного.',
+      'Семейный фон был чувствительным — резкие слова ранили сильнее обычного.']}},
+ {id:'study',name:'Знания и учёба',houses:[4,5,9],karakas:['Mercury','Jupiter'],tx:{
+  pb:['Прекрасное время учиться и учить: знания будут даваться легко, и может появиться наставник, который откроет вам новую дверь.',
+      'Знания в тот период давались легко; встреченные тогда учителя и книги открыли новые двери.'],
+  ps:['Голова ясная: удачные дни для учёбы, экзаменов, важных текстов и переговоров.',
+      'Голова была ясной — учёба, тексты и переговоры удавались.'],
+  nb:['Учёба потребует двойных усилий: внимание будет рассеиваться. Дробите материал, перепроверяйте написанное и не оставляйте всё на последнюю ночь.',
+      'Учёба требовала двойных усилий — внимание рассеивалось. Что взято упорством, то останется.'],
+  ns:['Внимание рассеяно: перепроверяйте документы и договорённости, экзамены готовьте с запасом.',
+      'Внимание рассеивалось — в бумагах и договорённостях легко было ошибиться.']}},
+ {id:'spirit',name:'Духовный путь',houses:[9,12],karakas:['Ketu','Jupiter','Saturn'],tx:{
+  pb:['Душа попросит глубины: потянет к практикам, храмам и учителям — и они будут находиться словно сами собой. Благоприятное время для посвящений и обетов.',
+      'Период тянул к глубине: практики, храмы и учителя находились словно сами. Посеянное тогда зерно духа прорастает.'],
+  ps:['Тихие, глубокие дни: медитация, молитва и уединение дадут больше, чем суета.',
+      'Дни были обращены внутрь — практика и уединение давали больше, чем суета.'],
+  nb:['Возможна духовная перезагрузка: старые опоры могут показаться пустыми. Не пугайтесь тишины — это расчистка места для нового.',
+      'Период перетряхивал опоры — старое казалось пустым. Это была расчистка места, и она пошла на пользу.'],
+  ns:['День просит тишины: сократите суету, побудьте с собой — ответы придут в покое.',
+      'Эти дни просили тишины — суета утомляла сильнее обычного.']}}
+];
+const SPHERE_MIXED=[
+ ['Эта сфера выходит в фокус: событий здесь будет больше обычного, но фон противоречив — действуйте выверенно, без спешки.',
+  'Эта сфера была в фокусе: событий было больше обычного, но фон оставался противоречивым.'],
+ ['Эта сфера сейчас в фокусе: не форсируйте, наблюдайте и действуйте точечно.',
+  'Эта сфера была в фокусе — события шли волнами, и точечные действия работали лучше напора.']
+];
+// активация сферы: даша (караки/владения/положение лордов) + транзиты Юпитера/Сатурна/Раху по её домам от Луны
+function sphereScore(chart,dl,sph,start,end,moonSign,period){
+  let act=0,tone=0,dashaLord=null;
+  const wPrat=(period==='day'||period==='week')?0.7:0.3;
+  for(const [lord,w] of [[dl.maha,1],[dl.antar,1.5],[dl.prat,wPrat]]){
+    let hits=0;
+    if(sph.karakas.includes(lord)) hits++;
+    if(housesRuledBy(chart,lord).some(hh=>sph.houses.includes(hh))) hits++;
+    if(sph.houses.includes(houseFromLagna(chart.pos[lord],chart.pos.Lagna))) hits++;
+    if(hits){ const k=Math.min(hits,2)/2; act+=w*k; tone+=(NAT_BENEFIC.has(lord)?0.55:-0.3)*w*k; if(!dashaLord)dashaLord=lord; }
+  }
+  const pts=[]; if(period==='year'||period==='five'){ for(let ms=start;ms<end;ms+=15*MS_DAY) pts.push(ms); } else pts.push(start);
+  let jup=0,sat=0,rahu=0;
+  for(const ms of pts){
+    if(sph.houses.includes(relHouse(moonSign,signAtKey('Jupiter',ms)))) jup++;
+    if(sph.houses.includes(relHouse(moonSign,signAtKey('Saturn',ms)))) sat++;
+    if(sph.houses.includes(relHouse(moonSign,signAtKey('Rahu',ms)))) rahu++;
+  }
+  const n=pts.length;
+  tone += (jup/n)*0.8 - (sat/n)*0.55 - (rahu/n)*0.25;
+  act += Math.min(0.9,(jup+sat+rahu)/n*0.5);
+  return {act,tone,dashaLord};
+}
+function spheresBlock(chart,tl,anchor,start,end,moonSign,ashta,period){
+  const dl=dashaLevels(tl,anchor);
+  const scale=(period==='day'||period==='week')?'s':'b';
+  const scored=SPHERES.map(sph=>({sph,...sphereScore(chart,dl,sph,start,end,moonSign,period)}));
+  let sel=scored.filter(x=>x.act>=0.7||Math.abs(x.tone)>=0.6)
+    .sort((a,b)=>(b.act+Math.abs(b.tone))-(a.act+Math.abs(a.tone))).slice(0,5);
+  if(sel.length<3) sel=[...scored].sort((a,b)=>(b.act+Math.abs(b.tone))-(a.act+Math.abs(a.tone))).slice(0,3);
+  // «нейтральных» сфер оставляем не больше двух — иначе повторяется один и тот же текст
+  let mixedKept=0;
+  sel=sel.filter(x=>{ if(Math.abs(x.tone)>=0.35) return true; return ++mixedKept<=2; });
+  let h='<div class="block-title">Сферы жизни: '+byTense(['чего ждать','как это было'])+'</div>';
+  h+='<p class="block-lead">Сферы, которые '+byTense(['активирует','активировал'])+' этот период (по активным дашам и транзитам), — от самой заметной.</p>';
+  for(const x of sel){
+    const vt = x.tone>=0.35?'good' : x.tone<=-0.35?'bad' : 'n';
+    let txt;
+    if(vt==='good') txt=byTense(scale==='b'?x.sph.tx.pb:x.sph.tx.ps);
+    else if(vt==='bad') txt=byTense(scale==='b'?x.sph.tx.nb:x.sph.tx.ns);
+    else txt=byTense(scale==='b'?SPHERE_MIXED[0]:SPHERE_MIXED[1]);
+    if(txt.includes('{DIR}')){
+      const lord=(x.dashaLord&&DIRECTIONS[x.dashaLord])?x.dashaLord:'Jupiter';
+      txt=txt.replace('{DIR}',' на '+DIRECTIONS[lord]);
+    }
+    h+='<div class="card"><h4>'+esc(x.sph.name)+' '+tagFor(vt)+'</h4><p>'+esc(txt)+'</p></div>';
+  }
+  h+='<p class="note">Сферы выделены по управителям активных периодов Вимшоттари (дома, которыми они владеют и в которых стоят, их караки) и по транзитам Юпитера, Сатурна и Раху по домам от Луны.</p>';
+  return h;
+}
+
 /* ── ЕДИНАЯ ОЦЕНКА ПЕРИОДА — одна формула для карточки-вердикта И сводки ── */
 const PERIOD_ACC={day:'этот день',week:'эту неделю',month:'этот месяц',year:'этот год',five:'это пятилетие'};
 function periodScore(chart,tl,anchor,start,end,moonSign,moonNak,ashta,period,ssWin){
@@ -1460,16 +1626,24 @@ function periodSummary(chart,ps,period){
 
   const vt = s>=0.8?'good':s>=-0.6?'n':'bad';
   let advice;
-  if(vt==='good') advice='Смело беритесь за важное — особенно за то, что созвучно перечисленным выше темам: почва хорошая, самое время делать шаги, а не откладывать.';
-  else if(vt==='n') advice=(period==='day')
-    ? 'Такой день лучше отдать текущим делам: не форсируйте, а важные шаги по возможности назначьте на более сильный день.'
-    : 'Делайте главное на подъёмах — в дни, когда Луна сильна, — а в трудные дни занимайтесь текущим и не форсируйте.';
-  else advice='Лучше не начинать крупное и рискованное. Это время завершать начатое, наводить порядок, укреплять здоровье и тыл — почва выровняется позже.';
+  if(TENSE==='past'){
+    if(vt==='good') advice='Это было время, когда стоило действовать смело, — надеюсь, вы использовали его волну.';
+    else if(vt==='n') advice='Это было время «на подъёмах»: главное удавалось в дни сильной Луны, а напор в трудные дни мало что давал.';
+    else advice='Это было время завершений и наведения порядка, а не больших стартов. Если период дался тяжело — вы прошли настоящую школу, и её плоды ещё проявятся.';
+  } else {
+    if(vt==='good') advice='Смело беритесь за важное — особенно за то, что созвучно перечисленным выше темам: почва хорошая, самое время делать шаги, а не откладывать.';
+    else if(vt==='n') advice=(period==='day')
+      ? 'Такой день лучше отдать текущим делам: не форсируйте, а важные шаги по возможности назначьте на более сильный день.'
+      : 'Делайте главное на подъёмах — в дни, когда Луна сильна, — а в трудные дни занимайтесь текущим и не форсируйте.';
+    else advice='Лучше не начинать крупное и рискованное. Это время завершать начатое, наводить порядок, укреплять здоровье и тыл — почва выровняется позже.';
+  }
 
-  let body='Если посмотреть на '+PERIOD_ACC[period]+' целиком, я бы назвала общую картину <b>'+verdictAcc(s)+'</b>. '+
-    'Ведущая нить — <b>'+esc(dashaWho)+'</b>. На первый план выходят темы: '+esc(themes)+'. ';
-  if(ps.pos.length) body+='В вашу пользу играет то, что '+esc(ps.pos.join('; '))+'. ';
-  if(ps.neg.length) body+='На что обратить внимание: '+esc(ps.neg.join('; '))+'. ';
+  const tname=PERIOD_TNAME[period][TIDX[TENSE]];
+  let body=byTense(['Если посмотреть на ','Если оглянуться на '])+tname+' целиком, я бы назвала общую картину <b>'+verdictAcc(s)+'</b>. '+
+    'Ведущая нить — <b>'+esc(dashaWho)+'</b>. '+
+    (TENSE==='fut'?'На первый план выйдут темы: ':TENSE==='past'?'На первом плане были темы: ':'На первый план выходят темы: ')+esc(themes)+'. ';
+  if(ps.pos.length) body+=(TENSE==='fut'?'В вашу пользу будет играть то, что ':TENSE==='past'?'В вашу пользу играло то, что ':'В вашу пользу играет то, что ')+esc(ps.pos.join('; '))+'. ';
+  if(ps.neg.length) body+=byTense(['На что обратить внимание: ','Что делало период сложнее: '])+esc(ps.neg.join('; '))+'. ';
   body+=advice;
 
   return '<div class="block-title">Сводка периода</div><div class="card summary"><p>'+body+'</p></div>';
@@ -1491,7 +1665,8 @@ function deedBlock(chart,tl,deed,start,end,anchor,moonSign,moonNak,ashta,period)
   const v=deedVerdict(verdictScore);
   const posU=[...new Set(rep.pos)], negU=[...new Set(rep.neg)];
 
-  let body='Задуманное дело — «'+esc(deed.label.toLowerCase())+'». Мой вывод на '+PERIOD_ACC[period]+': <b>'+esc(v.w)+'</b>. ';
+  let body='Задуманное дело — «'+esc(deed.label.toLowerCase())+'». '+
+    (TENSE==='past'?'Этот период уже позади; мой вывод о нём: ':'Мой вывод на '+PERIOD_TNAME[period][TIDX[TENSE]]+': ')+'<b>'+esc(v.w)+'</b>. ';
   if(posU.length) body+='За это говорит то, что '+esc(posU.slice(0,3).join('; '))+'. ';
   if(negU.length) body+='Против — '+esc(negU.slice(0,3).join('; '))+'. ';
   if(deed.nak==='none'&&!deed.varas.length) body+='Для такого дела классическая мухурта не выделяет особых дней недели и накшатр — важнее спокойные транзиты и поддержка даши. ';
@@ -1507,19 +1682,20 @@ function deedBlock(chart,tl,deed,start,end,anchor,moonSign,moonNak,ashta,period)
       const wins=[]; for(const b of best){ const last=wins[wins.length-1];
         if(last && b.ms-last.to<=20*MS_DAY) last.to=b.ms; else wins.push({from:b.ms,to:b.ms}); }
       const str=wins.map(w=>w.to>w.from?('с '+fmtD(w.from)+' по '+fmtD(w.to)):('около '+fmtD(w.from))).join('; ');
-      h+='<p class="why"><b>Наиболее удачные окна:</b> '+str+'.</p>';
+      h+='<p class="why"><b>'+byTense(['Наиболее удачные окна:','Наиболее удачными окнами были:'])+'</b> '+str+'.</p>';
     } else {
-      h+='<p class="why"><b>Лучшие дни для этого дела:</b> '+best.map(b=>fmtD(b.ms)).join(', ')+'.</p>';
+      h+='<p class="why"><b>'+byTense(['Лучшие дни для этого дела:','Лучшими днями для этого дела были:'])+'</b> '+best.map(b=>fmtD(b.ms)).join(', ')+'.</p>';
     }
   } else if(period==='week'||period==='month'){
-    h+='<p class="why">Явно выигрышных дней под это дело в выбранном окне не нашлось — при возможности присмотрите более благоприятный период.</p>';
+    h+='<p class="why">'+byTense(['Явно выигрышных дней под это дело в выбранном окне не нашлось — при возможности присмотрите более благоприятный период.',
+      'Явно выигрышных дней под это дело в том окне не находилось — фон не поддерживал.'])+'</p>';
   }
   if(period==='day' && verdictScore<1.0){
     // подсказать ближайший более удачный день (та же техника, следующие 14 дней)
     const near=[]; for(let k=1;k<=14;k++){ const ms=addDaysMs(anchor,k);
       near.push({ms,s:deedScoreAt(chart,tl,deed,ms,moonSign,moonNak,ashta,true).s}); }
     const better=near.filter(x=>x.s>=Math.max(verdictScore+0.5,1.0)).sort((a,b)=>b.s-a.s).slice(0,2).sort((a,b)=>a.ms-b.ms);
-    if(better.length) h+='<p class="why"><b>Ближайшие более удачные дни:</b> '+better.map(x=>fmtD(x.ms)).join(', ')+'.</p>';
+    if(better.length) h+='<p class="why"><b>'+byTense(['Ближайшие более удачные дни:','Более удачные дни рядом с этой датой:'])+'</b> '+better.map(x=>fmtD(x.ms)).join(', ')+'.</p>';
   }
   h+='<p class="note" style="margin-top:8px">Оценка по мухурте: сигнификаторы дела в активной даше, транзиты карак и Юпитера, для коротких периодов — титхи, вара, накшатра, карана, тара- и чандра-бала. Это ориентир; точную дату лучше согласовать с астрологом.</p>';
   h+='</div>';

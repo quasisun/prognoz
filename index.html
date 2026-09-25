@@ -97,6 +97,29 @@
     .rtable th,.rtable td{padding:6px 6px}
   }
 
+  /* ── доступ по коду + превью ── */
+  details.access{margin:14px 0 4px;border:1px solid var(--c-line);border-radius:10px;padding:0 14px}
+  details.access[open]{padding-bottom:12px}
+  details.access>summary{cursor:pointer;padding:12px 0;color:var(--c-red);font-weight:600}
+  .access-row{display:flex;gap:8px}
+  .access-row input{flex:1 1 auto}
+  .access-row .astro-btn{flex:0 0 auto;min-height:44px;padding:10px 20px}
+  .access-msg{margin:8px 0 0;font-size:.9rem;font-weight:600}
+  .access-state{margin:4px 0 0;font-size:.85rem;color:#1a8a3c}
+  .preview-cta{margin:18px 0 4px;border:2px solid var(--c-orange);border-radius:16px;
+    padding:20px 18px;background:#fff5f1}
+  .preview-cta .pc-lead{font-family:var(--font-display);font-weight:400;color:var(--c-red);
+    font-size:clamp(1.4rem,5vw,1.9rem);line-height:1.15;margin-bottom:6px}
+  .preview-cta p{font-size:.9rem;color:var(--c-ink);line-height:1.5;margin:0 0 10px}
+  .preview-cta ul{margin:0 0 14px;padding-left:20px}
+  .preview-cta li{font-size:.9rem;line-height:1.5;margin:3px 0}
+  .pc-links{display:flex;flex-direction:column;gap:10px}
+  .pc-links a,.pc-links button{display:block;width:100%;text-decoration:none;text-align:center;
+    border-radius:12px;padding:14px 18px;font-weight:700;line-height:1.3;cursor:pointer;font-size:1rem}
+  .pc-get{background:linear-gradient(135deg,var(--c-red),var(--c-orange));color:#fff !important;border:none}
+  .pc-get small{display:block;font-weight:400;font-size:.8rem;opacity:.9;margin-top:2px;color:#fff !important}
+  .pc-have{background:#fff;color:var(--c-red) !important;border:2px solid var(--c-orange)}
+
   /* ── печать / сохранение в PDF ── */
   .print-only{display:none}
   @media print{
@@ -210,6 +233,22 @@
       <button class="astro-btn astro-btn--block" id="calcBtn" style="margin-top:18px">
         Рассчитать прогноз
       </button>
+
+      <!-- Доступ по коду (полная версия на 24 часа) -->
+      <details class="access" id="accessBox">
+        <summary>Есть код доступа? Открыть полный прогноз</summary>
+        <p class="muted" style="margin:6px 0 10px;font-size:.85rem">
+          Прогноз на день — бесплатный. Код открывает на <b>24 часа</b> полные прогнозы на
+          неделю, месяц, год и 5 лет: сводку, сферы жизни, транзиты с датами, лучшие дни,
+          анализ задуманного дела и скачивание в PDF.
+        </p>
+        <div class="access-row">
+          <input id="accessCode" type="text" autocomplete="off" spellcheck="false" placeholder="Введите код">
+          <button type="button" class="astro-btn" id="accessBtn">Открыть</button>
+        </div>
+        <p id="accessMsg" class="access-msg"></p>
+        <p id="accessState" class="access-state"></p>
+      </details>
      </div><!-- /inputForm -->
 
       <div id="result" aria-live="polite"></div>
@@ -931,6 +970,61 @@ document.getElementById('periodSel').addEventListener('click',e=>{
   if(document.getElementById('result').childElementCount) runForecast();
 });
 document.getElementById('calcBtn').addEventListener('click',runForecast);
+
+/* ── ДОСТУП: «день» бесплатно; неделя/месяц/год/5 лет — превью, полный по коду на 24 часа
+   (схема ректификации, вариант A: статичный код, SHA-256, срок в localStorage) ── */
+let FULL=false;
+const CODE_24H='32eb1a8dafeb0873c8d00b0e9058c8c77ff6c6d9235b3236989c50ef63d8f9ba'; // код «1080»; смена кода = пересчёт хэша
+const ACCESS_KEY='prognoz_24h_exp';
+const CODE_URL='https://goroskop1008.ru/uslugi'; // заменить на прямую ссылку товара Тильды
+async function sha256hex(s){ const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));
+  return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join(''); }
+function accessExp(){ try{ return +localStorage.getItem(ACCESS_KEY)||0; }catch(e){ return 0; } }
+function checkUnlock(){ FULL=accessExp()>Date.now(); showAccessState(); return FULL; }
+function showAccessState(){
+  const el=document.getElementById('accessState'); if(!el) return;
+  const exp=accessExp();
+  el.textContent = exp>Date.now() ? ('Полный доступ активен до '+moment(exp).format('DD.MM.YYYY, HH:mm')) : '';
+}
+async function submitCode(){
+  const inp=document.getElementById('accessCode'), msg=document.getElementById('accessMsg');
+  const v=(inp.value||'').trim(); if(!v) return;
+  if(await sha256hex(v)===CODE_24H){
+    try{ localStorage.setItem(ACCESS_KEY,String(Date.now()+24*3600*1000)); }catch(e){}
+    FULL=true; msg.style.color='#1a8a3c'; msg.textContent='Код принят — полный прогноз открыт на 24 часа.';
+    inp.value=''; showAccessState();
+    if(document.getElementById('result').childElementCount) runForecast();
+  } else { msg.style.color='var(--c-red)'; msg.textContent='Код не подошёл. Проверьте написание.'; }
+}
+document.getElementById('accessBtn').addEventListener('click',submitCode);
+document.getElementById('accessCode').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); submitCode(); } });
+
+const PREVIEW_LABEL={week:['Прогноз на неделю','Разбор прошедшей недели'],month:['Прогноз на месяц','Разбор прошедшего месяца'],
+  year:['Прогноз на год','Разбор прошедшего года'],five:['Прогноз на 5 лет','Разбор прошедших 5 лет']};
+const PERIOD_FOR={week:'неделю',month:'месяц',year:'год',five:'5 лет'};
+function renderPreview(chart,tl,anchor,start,end,ps,period){
+  const dh=dashaHeadline(tl,anchor,3);
+  let h='<div class="verdict-card"><div class="verdict-label">'+byTense(PREVIEW_LABEL[period])+' · '+
+    fmtDM(start)+' – '+fmtD(addDaysMs(end,-1))+'</div>'+
+    '<div class="verdict-title">'+(period==='five'?'Долгосрочные тенденции':verdict(ps.score))+'</div>'+
+    '<div class="verdict-sub">'+esc(dh.str)+'</div></div>';
+  h+='<div class="block-title">Вимшоттари-даша</div>';
+  h+='<div class="card"><p>'+esc(dh.str)+'</p><p class="why">'+dashaLordDesc(chart,dh.d.antar)+'</p></div>';
+  h+='<div class="preview-cta"><div class="pc-lead">Это превью</div>'+
+    '<p>Полный прогноз на '+PERIOD_FOR[period]+' открывается кодом доступа на <b>24 часа</b>. Внутри:</p>'+
+    '<ul>'+
+    '<li>сводка периода и предсказания по сферам жизни (любовь, деньги, карьера, дом, дороги…);</li>'+
+    '<li>транзиты с точными датами: Саде-сати, Юпитер, Сатурн, Раху и Кету, аштакаварга;</li>'+
+    '<li>лучшие и напряжённые дни периода;</li>'+
+    '<li>оценка задуманного дела по мухурте с лучшими датами;</li>'+
+    '<li>скачивание прогноза в PDF.</li></ul>'+
+    '<div class="pc-links">'+
+    '<a class="pc-get" href="'+CODE_URL+'" target="_blank" rel="noopener">Получить код доступа<small>полный прогноз на 24 часа</small></a>'+
+    '<button type="button" class="pc-have" id="pcHaveBtn">У меня уже есть код</button>'+
+    '</div></div>'+
+    '<p class="note" style="margin-top:10px">Прогноз на <b>день</b> — полностью бесплатный: выберите период «День».</p>';
+  return h;
+}
 // текст дела и выбор из списка взаимно исключают друг друга — не даём молчаливой подмены
 document.getElementById('deedText').addEventListener('input',()=>{
   if(document.getElementById('deedText').value.trim()) document.getElementById('deed').value='';
@@ -1015,20 +1109,27 @@ async function runForecast(){
     if(!deed && deedSel) deed=DEEDS.find(x=>x.id===deedSel)||null;
 
     const placeStr=selected?(selected.name+(selected.admin?', '+selected.admin:'')):('координаты '+lat.toFixed(2)+', '+lon.toFixed(2));
+    checkUnlock(); // доступ мог истечь в открытой вкладке
+    const unlocked = FULL || PERIOD==='day'; // день — бесплатный лид-магнит
     let html='';
     html+=printHeadHtml(bdate,btime,placeStr,zone,start,end);
     html+=natalBlock(chart,natalMoonSign,natalMoonNak,lagSign);
-    if(PERIOD==='day') html+=renderDay(chart,tl,anchor,start,end,natalMoonSign,natalMoonNak,ashta,ps);
-    else if(PERIOD==='week') html+=renderWeek(chart,tl,start,end,natalMoonSign,natalMoonNak,ashta,ps);
-    else if(PERIOD==='month') html+=renderMonth(chart,tl,start,end,natalMoonSign,natalMoonNak,ashta,ps);
-    else if(PERIOD==='year') html+=renderYear(chart,tl,start,end,natalMoonSign,natalMoonNak,ashta,ps,ssWin);
-    else html+=renderFive(chart,tl,start,end,natalMoonSign,natalMoonNak,ashta,ps,ssWin);
-    html+=periodSummary(chart,ps,PERIOD);
-    html+=spheresBlock(chart,tl,anchor,start,end,natalMoonSign,ashta,PERIOD);
-    if(deed) html+=deedBlock(chart,tl,deed,start,end,anchor,natalMoonSign,natalMoonNak,ashta,PERIOD);
-    else if(deedUnrecognized) html+=deedNotRecognized();
-    html+=footerNote();
-    html+=printBtnHtml();
+    if(!unlocked){
+      html+=renderPreview(chart,tl,anchor,start,end,ps,PERIOD);
+      html+=footerNote();
+    } else {
+      if(PERIOD==='day') html+=renderDay(chart,tl,anchor,start,end,natalMoonSign,natalMoonNak,ashta,ps);
+      else if(PERIOD==='week') html+=renderWeek(chart,tl,start,end,natalMoonSign,natalMoonNak,ashta,ps);
+      else if(PERIOD==='month') html+=renderMonth(chart,tl,start,end,natalMoonSign,natalMoonNak,ashta,ps);
+      else if(PERIOD==='year') html+=renderYear(chart,tl,start,end,natalMoonSign,natalMoonNak,ashta,ps,ssWin);
+      else html+=renderFive(chart,tl,start,end,natalMoonSign,natalMoonNak,ashta,ps,ssWin);
+      html+=periodSummary(chart,ps,PERIOD);
+      html+=spheresBlock(chart,tl,anchor,start,end,natalMoonSign,ashta,PERIOD);
+      if(deed) html+=deedBlock(chart,tl,deed,start,end,anchor,natalMoonSign,natalMoonNak,ashta,PERIOD);
+      else if(deedUnrecognized) html+=deedNotRecognized();
+      html+=footerNote();
+      html+=printBtnHtml();
+    }
     res.innerHTML=html;
     setTimeout(()=>{ try{ res.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} },60);
   }catch(err){
@@ -1757,6 +1858,11 @@ function footerNote(){
 /* ── печать / сохранение в PDF ── */
 document.getElementById('result').addEventListener('click',e=>{
   if(e.target.closest('#printBtn')) window.print();
+  if(e.target.closest('#pcHaveBtn')){
+    const box=document.getElementById('accessBox'); box.open=true;
+    box.scrollIntoView({behavior:'smooth',block:'center'});
+    setTimeout(()=>{ try{ document.getElementById('accessCode').focus(); }catch(err){} },400);
+  }
 });
 // на время печати раскрываем карту рождения, затем возвращаем как было
 let natalWasOpen=null;
@@ -1788,6 +1894,7 @@ window.addEventListener('afterprint',()=>{
 })();
 
 /* ── старт ── */
+checkUnlock();
 document.getElementById('year').textContent=new Date().getFullYear();
 (function initDeeds(){
   const sel=document.getElementById('deed');

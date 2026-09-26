@@ -207,7 +207,16 @@
           <label for="ttime">Время (для прогноза на день)</label>
           <input id="ttime" type="time" value="12:00">
         </div>
+        <div class="astro-field">
+          <label for="fzone">Часовой пояс прогноза (где вы будете)</label>
+          <select id="fzone"></select>
+        </div>
       </div>
+      <p class="note" style="margin:-8px 0 14px">
+        Пояс важен для прогноза на день: «полдень» в Москве и во Владивостоке — разные моменты,
+        и Луна (титхи, накшатра, тара) успевает сместиться. Координаты места не нужны:
+        восход и Лагна момента в расчёте не используются, а даши и транзиты от места не зависят.
+      </p>
 
       <label style="display:block;margin-bottom:4px">Период прогноза</label>
       <div class="period-sel" id="periodSel" role="group" aria-label="Период прогноза">
@@ -1101,15 +1110,16 @@ async function runForecast(){
       if(!isFinite(lat)||!isFinite(lon)){ res.innerHTML='<p class="err">Выберите место рождения из выпадающего списка подсказок или задайте координаты и пояс вручную.</p>'; return; }
       if(Math.abs(lat)>90||Math.abs(lon)>180){ res.innerHTML='<p class="err">Проверьте координаты: широта в пределах ±90°, долгота ±180°.</p>'; return; }
     }
-    FZONE=zone;
+    // пояс прогноза: где человек будет в этот период (по умолчанию — пояс рождения)
+    FZONE=document.getElementById('fzone').value||zone;
 
     const [by,bmo,bd]=bdate.split('-').map(Number);
     const [bh,bmi]=btime.split(':').map(Number);
     if(![by,bmo,bd,bh,bmi].every(isFinite)){ res.innerHTML='<p class="err">Неверный формат даты или времени рождения.</p>'; return; }
-    const bOff=moment.tz([by,bmo-1,bd,bh,bmi],zone).utcOffset()/60;
+    const bOff=moment.tz([by,bmo-1,bd,bh,bmi],zone).utcOffset()/60; // рождение — всегда в поясе места рождения
     const chart=computeChart(by,bmo,bd,bh,bmi,bOff,lat,lon);
     const tl=buildTimeline(chart);
-    const {anchor,start,end}=periodBounds(zone,tdate,ttime);
+    const {anchor,start,end}=periodBounds(FZONE,tdate,ttime);
     if(anchor<chart.birthMs){ res.innerHTML='<p class="err">Дата прогноза раньше даты рождения — прогноз строится только на время после рождения.</p>'; return; }
     // конец первого полного цикла Вимшоттари (9 махадаш = 120 лет минус пренатальная доля)
     const tlEnd=tl.birthMs+tl.mahas[8].endDay*86400000;
@@ -1862,6 +1872,7 @@ function printHeadHtml(bdate,btime,placeStr,zone,start,end){
     '<div class="ph-sub">Индийская астрология со Светланой Кройцер · goroskop1008.ru · аянамша Лахири, Whole Sign</div>'+
     '<div class="ph-line">Рождение: <b>'+d+'.'+m+'.'+y+', '+esc(btime)+'</b> · '+esc(placeStr)+' · пояс '+esc(zone)+'</div>'+
     '<div class="ph-line">Период: <b>'+PERIOD_PRINT[PERIOD]+'</b> · '+fmtD(start)+' – '+fmtD(addDaysMs(end,-1))+
+    (FZONE!==zone?' · пояс прогноза '+esc(FZONE):'')+
     ' · составлено '+fmtDShort(Date.now())+'</div></div>';
 }
 function printBtnHtml(){
@@ -1922,6 +1933,13 @@ document.getElementById('year').textContent=new Date().getFullYear();
   const sel=document.getElementById('deed');
   sel.innerHTML='<option value="">— не оценивать дело —</option>'+
     DEEDS.map(d=>'<option value="'+d.id+'">'+esc(d.label)+'</option>').join('');
+})();
+(function initFzone(){
+  const sel=document.getElementById('fzone');
+  let h='<option value="">как место рождения</option>';
+  for(const [grp,zs] of MANUAL_ZONES){ h+='<optgroup label="'+esc(grp)+'">';
+    for(const [z,lbl] of zs) h+='<option value="'+z+'">'+esc(lbl)+'</option>'; h+='</optgroup>'; }
+  sel.innerHTML=h;
 })();
 (function initDates(){
   const t=new Date(); // локальная дата пользователя (toISOString дал бы UTC — на востоке РФ это вчера)
